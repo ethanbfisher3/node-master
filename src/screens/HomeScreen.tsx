@@ -1,5 +1,5 @@
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import React from "react"
+import { Text, TouchableOpacity, View, ScrollView } from "react-native"
 import {
   Hammer,
   Bolt,
@@ -7,18 +7,20 @@ import {
   LayoutGrid,
   ShoppingBag,
   SunMoon,
-} from "lucide-react-native";
+} from "lucide-react-native"
+import Feather from "@expo/vector-icons/Feather"
 
-import { styles } from "../styles";
+import { styles } from "../styles"
 
 type HomeScreenProps = {
-  coins: number;
-  onSelectLevels: () => void;
-  onDailyWeekly: () => void;
-  onTimeTrial: () => void;
-  onStore: () => void;
-  onAdmin?: () => void;
-};
+  coins: number
+  onSelectLevels: () => void
+  onDailyWeekly: () => void
+  onTimeTrial: () => void
+  onStore: () => void
+  onAdmin?: () => void
+  onSettings: () => void
+}
 
 export function HomeScreen({
   coins,
@@ -27,6 +29,7 @@ export function HomeScreen({
   onTimeTrial,
   onStore,
   onAdmin,
+  onSettings,
 }: HomeScreenProps) {
   return (
     <View style={styles.homeContainer}>
@@ -58,7 +61,9 @@ export function HomeScreen({
       <View style={styles.homeMenuGrid}>
         <TouchableOpacity style={styles.homeMenuButton} onPress={onDailyWeekly}>
           <SunMoon size={20} color="#2563eb" />
-          <Text style={styles.homeMenuButtonTitle}>DAILY/WEEKLY</Text>
+          <Text style={styles.homeMenuButtonTitle}>
+            DAILY/WEEKLY CHALLENGES
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.homeMenuButton} onPress={onTimeTrial}>
           <Bolt size={20} color="#2563eb" />
@@ -68,13 +73,17 @@ export function HomeScreen({
           <ShoppingBag size={20} color="#2563eb" />
           <Text style={styles.homeMenuButtonTitle}>STORE</Text>
         </TouchableOpacity>
-        {onAdmin && (
+        <TouchableOpacity style={styles.homeMenuButton} onPress={onSettings}>
+          <Feather name="settings" size={20} color="#2563eb" />
+          <Text style={styles.homeMenuButtonTitle}>SETTINGS</Text>
+        </TouchableOpacity>
+        {/* {onAdmin && (
           <TouchableOpacity style={styles.homeMenuButton} onPress={onAdmin}>
             <Hammer size={20} color="#2563eb" />
             <Text style={styles.homeMenuButtonTitle}>ADMIN (DEV)</Text>
           </TouchableOpacity>
-        )}
+        )} */}
       </View>
     </View>
-  );
+  )
 }

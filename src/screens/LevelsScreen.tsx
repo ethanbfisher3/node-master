@@ -1,26 +1,27 @@
-import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { ArrowLeft, Star } from "lucide-react-native";
+import React from "react"
+import { ScrollView, Text, TouchableOpacity, View } from "react-native"
+import { ArrowLeft, Star } from "lucide-react-native"
 
-import { PRE_GENERATED_LEVELS } from "../data/levels";
-import { styles } from "../styles";
+import { PRE_GENERATED_LEVELS } from "../data/levels"
+import { styles } from "../styles"
 
 type LevelsScreenProps = {
-  currentLevel: number;
-  completedLevelIds: Set<number>;
-  title?: string;
-  levelIds?: number[];
+  currentLevel: number
+  completedLevelIds: Set<number>
+  title?: string
+  levelIds?: number[]
   sections?: Array<{
-    title: string;
-    levelIds: number[];
-    onStartLevel: (levelId: number) => void;
-  }>;
-  showNodeHeaders?: boolean;
-  onBack: () => void;
-  onStartLevel: (levelId: number) => void;
-};
+    title: string
+    levelIds: number[]
+    onStartLevel: (levelId: number) => void
+    completedLevelIds?: Set<number>
+  }>
+  showNodeHeaders?: boolean
+  onBack: () => void
+  onStartLevel: (levelId: number) => void
+}
 
-const NODE_COUNTS = Array.from({ length: 11 }, (_, index) => index + 5);
+const NODE_COUNTS = Array.from({ length: 11 }, (_, index) => index + 5)
 
 export function LevelsScreen({
   currentLevel,
@@ -33,13 +34,14 @@ export function LevelsScreen({
   onStartLevel,
 }: LevelsScreenProps) {
   const levelsToRender =
-    levelIds ?? PRE_GENERATED_LEVELS.map((levelEntry) => levelEntry.id);
+    levelIds ?? PRE_GENERATED_LEVELS.map((levelEntry) => levelEntry.id)
 
   const renderLevelButton = (
     levelId: number,
     startLevel: (levelId: number) => void = onStartLevel,
+    completedIds: Set<number> = completedLevelIds,
   ) =>
-    completedLevelIds.has(levelId) ? (
+    completedIds.has(levelId) ? (
       <TouchableOpacity
         key={levelId}
         onPress={() => startLevel(levelId)}
@@ -60,7 +62,7 @@ export function LevelsScreen({
       >
         <Text style={[styles.levelButtonText]}>{levelId}</Text>
       </TouchableOpacity>
-    );
+    )
 
   return (
     <View style={styles.levelsContainer}>
@@ -81,7 +83,7 @@ export function LevelsScreen({
               (level) =>
                 level.nodes.length === nodeCount &&
                 levelsToRender.includes(level.id),
-            );
+            )
 
             return (
               <View key={nodeCount} style={styles.difficultySection}>
@@ -104,7 +106,7 @@ export function LevelsScreen({
                   {filteredLevels.map((level) => renderLevelButton(level.id))}
                 </View>
               </View>
-            );
+            )
           })
         ) : sections ? (
           sections.map((section) => (
@@ -126,7 +128,11 @@ export function LevelsScreen({
               </View>
               <View style={styles.levelGrid}>
                 {section.levelIds.map((levelId) =>
-                  renderLevelButton(levelId, section.onStartLevel),
+                  renderLevelButton(
+                    levelId,
+                    section.onStartLevel,
+                    section.completedLevelIds ?? completedLevelIds,
+                  ),
                 )}
               </View>
             </View>
@@ -138,5 +144,5 @@ export function LevelsScreen({
         )}
       </ScrollView>
     </View>
-  );
+  )
 }

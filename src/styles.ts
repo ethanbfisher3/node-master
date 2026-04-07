@@ -1,10 +1,10 @@
-import { Dimensions, StyleSheet } from "react-native";
-import { NODE_RADIUS } from "./utils/gameLogic";
+import { Dimensions, StyleSheet } from "react-native"
+import { NODE_RADIUS } from "./utils/gameLogic"
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 
-const GAME_WIDTH = 350;
-const GAME_HEIGHT = 500;
+const GAME_WIDTH = 350
+const GAME_HEIGHT = 500
 
 const styles = StyleSheet.create({
   container: {
@@ -52,7 +52,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#94a3b8",
     fontWeight: "500",
-    marginBottom: 48,
+    marginBottom: 24,
   },
   coinBadge: {
     flexDirection: "row",
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    marginBottom: 48,
+    marginBottom: 24,
   },
   coinText: {
     fontSize: 18,
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   },
   iconButton: {
     flex: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "#dbeafe",
     paddingVertical: 14,
     borderRadius: 20,
     alignItems: "center",
@@ -109,7 +109,7 @@ const styles = StyleSheet.create({
   },
   homeMenuButton: {
     width: "100%",
-    backgroundColor: "#e2e8f0",
+    backgroundColor: "#dbeafe",
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -195,6 +195,35 @@ const styles = StyleSheet.create({
     fontWeight: "800",
     fontSize: 12,
     letterSpacing: 0.5,
+  },
+  settingsScrollContent: {
+    paddingTop: 16,
+    paddingBottom: 24,
+    gap: 16,
+  },
+  settingsItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 12,
+  },
+  settingsItemTextContainer: {
+    flex: 1,
+    gap: 6,
+  },
+  settingsItemTitle: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: "#0f172a",
+  },
+  settingsItemDescription: {
+    fontSize: 12,
+    lineHeight: 18,
+    color: "#64748b",
+  },
+  settingsDivider: {
+    height: 1,
+    backgroundColor: "#e2e8f0",
   },
   adminContainer: {
     flex: 1,
@@ -357,7 +386,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     padding: 8,
     width: 60,
-    borderColor: "#f1f5f9",
+    borderColor: "#dbeafe",
   },
   levelButtonActive: {
     backgroundColor: "#2563eb",
@@ -377,7 +406,7 @@ const styles = StyleSheet.create({
   levelButtonText: {
     fontSize: 18,
     fontWeight: "900",
-    color: "#94a3b8",
+    color: "#626b77",
   },
   levelButtonTextActive: {
     color: "white",
@@ -432,10 +461,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fffbeb",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    padding: 12,
     borderRadius: 10,
-    flex: 1,
     justifyContent: "flex-end",
   },
   gameCoinText: {
@@ -447,7 +474,7 @@ const styles = StyleSheet.create({
   board: {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    backgroundColor: "rgba(240, 240, 240, 1)",
+    backgroundColor: "#dbeafe",
     alignSelf: "center",
     marginBottom: 16,
     borderRadius: 32,
@@ -692,7 +719,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-});
+})
 
 export {
   SCREEN_WIDTH,
@@ -701,4 +728,4 @@ export {
   GAME_HEIGHT,
   NODE_RADIUS,
   styles,
-};
+}
