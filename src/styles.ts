@@ -1,10 +1,10 @@
-import { Dimensions, StyleSheet } from "react-native"
-import { NODE_RADIUS } from "./utils/gameLogic"
+import { Dimensions, StyleSheet } from "react-native";
+import { NODE_RADIUS } from "./utils/gameLogic";
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-const GAME_WIDTH = 350
-const GAME_HEIGHT = 500
+const GAME_WIDTH = 350;
+const GAME_HEIGHT = 500;
 
 const styles = StyleSheet.create({
   container: {
@@ -154,11 +154,15 @@ const styles = StyleSheet.create({
     gap: 16,
     paddingTop: 16,
   },
+  storeScrollContent: {
+    paddingHorizontal: 24,
+    gap: 16,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
   modeCard: {
-    backgroundColor: "white",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#e2e8f0",
     padding: 20,
     gap: 12,
   },
@@ -179,7 +183,6 @@ const styles = StyleSheet.create({
   },
   modeCardButton: {
     alignSelf: "flex-start",
-    backgroundColor: "#2563eb",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -369,7 +372,6 @@ const styles = StyleSheet.create({
   divider: {
     flex: 1,
     height: 1,
-    backgroundColor: "#f1f5f9",
   },
   levelGrid: {
     flexDirection: "row",
@@ -474,12 +476,10 @@ const styles = StyleSheet.create({
   board: {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    backgroundColor: "#dbeafe",
     alignSelf: "center",
     marginBottom: 16,
     borderRadius: 32,
     borderWidth: 2,
-    borderColor: "#f1f5f9",
     overflow: "hidden",
   },
   boardSvg: {
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-})
+});
 
 export {
   SCREEN_WIDTH,
@@ -728,4 +728,4 @@ export {
   GAME_HEIGHT,
   NODE_RADIUS,
   styles,
-}
+};

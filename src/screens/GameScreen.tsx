@@ -3,6 +3,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import Svg, { Line } from "react-native-svg";
 import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native";
 
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import { DraggableNode } from "../components/DraggableNode";
 import { styles } from "../styles";
 import { Link, Node } from "../utils/gameLogic";
@@ -16,6 +17,7 @@ type GameScreenProps = {
   moves: number;
   trialTimeLeftSeconds?: number;
   noAdsOwned: boolean;
+  theme?: AppThemePalette;
   onBackHome: () => void;
   onOpenLevels: () => void;
   onRestart: () => void;
@@ -31,32 +33,66 @@ export function GameScreen({
   moves,
   trialTimeLeftSeconds,
   noAdsOwned,
+  theme,
   onBackHome,
   onOpenLevels,
   onRestart,
   onNodeDrag,
 }: GameScreenProps) {
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+
   return (
-    <View style={styles.gameContainer}>
+    <View
+      style={[
+        styles.gameContainer,
+        { backgroundColor: activeTheme.background },
+      ]}
+    >
       <View style={styles.gameHeader}>
         <View style={styles.gameHeaderLeft}>
-          <TouchableOpacity onPress={onBackHome} style={styles.gameIconButton}>
-            <ArrowLeft size={20} color="#64748b" />
+          <TouchableOpacity
+            onPress={onBackHome}
+            style={[
+              styles.gameIconButton,
+              { backgroundColor: activeTheme.surfaceAlt },
+            ]}
+          >
+            <ArrowLeft size={20} color={activeTheme.mutedText} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onOpenLevels}
-            style={styles.gameIconButton}
+            style={[
+              styles.gameIconButton,
+              { backgroundColor: activeTheme.surfaceAlt },
+            ]}
           >
-            <LayoutGrid size={20} color="#64748b" />
+            <LayoutGrid size={20} color={activeTheme.mutedText} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={onRestart} style={styles.gameIconButton}>
-            <RotateCcw size={20} color="#64748b" />
+          <TouchableOpacity
+            onPress={onRestart}
+            style={[
+              styles.gameIconButton,
+              { backgroundColor: activeTheme.surfaceAlt },
+            ]}
+          >
+            <RotateCcw size={20} color={activeTheme.mutedText} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.levelIndicator}>
-          <Text style={styles.levelIndicatorLabel}>Level</Text>
-          <Text style={styles.levelIndicatorValue}>{level}</Text>
+          <Text
+            style={[
+              styles.levelIndicatorLabel,
+              { color: activeTheme.mutedText },
+            ]}
+          >
+            Level
+          </Text>
+          <Text
+            style={[styles.levelIndicatorValue, { color: activeTheme.text }]}
+          >
+            {level}
+          </Text>
         </View>
 
         <View style={styles.gameCoinBadge}>
@@ -65,7 +101,15 @@ export function GameScreen({
         </View>
       </View>
 
-      <View style={styles.board}>
+      <View
+        style={[
+          styles.board,
+          {
+            backgroundColor: activeTheme.surfaceAlt,
+            borderColor: activeTheme.surfaceAlt,
+          },
+        ]}
+      >
         <Svg style={styles.boardSvg}>
           {links.map((link) => {
             const n1 = nodes.find((node) => node.id === link.node1Id)!;
@@ -95,13 +139,15 @@ export function GameScreen({
       </View>
 
       <View style={styles.gameFooter}>
-        <Text style={styles.movesText}>Moves: {moves}</Text>
+        <Text style={[styles.movesText, { color: activeTheme.mutedText }]}>
+          Moves: {moves}
+        </Text>
         {typeof trialTimeLeftSeconds === "number" && (
           <Text style={styles.trialTimerText}>
             Time Left: {trialTimeLeftSeconds}s
           </Text>
         )}
-        <Text style={styles.hintText}>
+        <Text style={[styles.hintText, { color: activeTheme.mutedText }]}>
           Drag nodes to untangle. Green links are clear!
         </Text>
       </View>

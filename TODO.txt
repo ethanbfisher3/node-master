@@ -1,10 +1,13 @@
 Make have some way of multi-tangling the nodes, instead of just green and red
 Cosmetics store to use coins? Or just don't include coins in the app
-Stars and Checks just like flow free
 Playable ad
 Achievements on the play store or whatever that is
 Audio
 Sharing results for time trials or smth
+Notifications
+Dark mode
+Packs, each with a bunch of levels. 
 
 How to make the levels more interesting:
 -have nodes that can't move
+-Levels where the goals is for all the lines to be red (if that's possible)
