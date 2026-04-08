@@ -1,23 +1,23 @@
 export type LevelPack = {
-  id: string
-  name: string
-  description: string
-  defaultOwned: boolean
-  storeItemId: string | null
-  price: number
-  priceType: "coins" | "real-money"
-  levelIds: number[]
-}
+  id: string;
+  name: string;
+  description: string;
+  defaultOwned: boolean;
+  storeItemId: string | null;
+  price: number;
+  priceType: "coins" | "real-money";
+  levelIds: number[];
+};
 
 type LevelPackSeed = {
-  id: string
-  name: string
-  description: string
-  defaultOwned: boolean
-  storeItemId: string | null
-  price: number
-  priceType: "coins" | "real-money"
-}
+  id: string;
+  name: string;
+  description: string;
+  defaultOwned: boolean;
+  storeItemId: string | null;
+  price: number;
+  priceType: "coins" | "real-money";
+};
 
 const LEVEL_PACK_SEEDS: LevelPackSeed[] = [
   {
@@ -92,14 +92,17 @@ const LEVEL_PACK_SEEDS: LevelPackSeed[] = [
     price: 450,
     priceType: "coins",
   },
-]
+];
 
 export function createLevelPacks(levelCount: number): LevelPack[] {
-  const safeCount = Math.max(1, Math.floor(levelCount))
-  const allLevelIds = Array.from({ length: safeCount }, (_, index) => index + 1)
+  const safeCount = Math.max(1, Math.floor(levelCount));
+  const allLevelIds = Array.from(
+    { length: safeCount },
+    (_, index) => index + 1,
+  );
 
   return LEVEL_PACK_SEEDS.map((seed) => ({
     ...seed,
     levelIds: [...allLevelIds],
-  }))
+  }));
 }

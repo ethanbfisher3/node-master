@@ -55,7 +55,13 @@ export function LevelsScreen({
           levelId === currentLevel && styles.levelButtonCurrent,
         ]}
       >
-        <Star size={14} color="#166534" fill="#166534" />
+        <Star
+          size={24}
+          color="#166534"
+          fill="#166534"
+          opacity={0.6}
+          style={{ position: "absolute" }}
+        />
         <Text style={styles.levelButtonTextCompleted}>{levelId}</Text>
       </TouchableOpacity>
     ) : (

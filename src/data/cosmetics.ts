@@ -10,15 +10,27 @@ export type AppThemePalette = {
   buttonText: string;
 };
 
+export type NodeLineStylePalette = {
+  nodeFill: string;
+  nodeBorder: string;
+  nodeDot: string;
+  line: string;
+  intersectingLine: string;
+};
+
+export type CosmeticCategory = "app-theme" | "node-line-style";
+
 export type Cosmetic = {
   id: string;
+  category: CosmeticCategory;
   name: string;
   description: string;
   price: number;
   priceType: "coins" | "real-money";
   owned: boolean;
   image: string | null;
-  theme: Partial<AppThemePalette>;
+  theme?: Partial<AppThemePalette>;
+  nodeLineStyle?: Partial<NodeLineStylePalette>;
 };
 
 export const DEFAULT_APP_THEME: AppThemePalette = {
@@ -33,9 +45,18 @@ export const DEFAULT_APP_THEME: AppThemePalette = {
   buttonText: "#ffffff",
 };
 
+export const DEFAULT_NODE_LINE_STYLE: NodeLineStylePalette = {
+  nodeFill: "#ffffff",
+  nodeBorder: "#0f172a",
+  nodeDot: "#0f172a",
+  line: "#10B981",
+  intersectingLine: "#EF4444",
+};
+
 const cosmetics: Cosmetic[] = [
   {
     id: "green-theme",
+    category: "app-theme",
     name: "Green Theme",
     description: "A refreshing green color scheme for the game.",
     price: 100,
@@ -51,6 +72,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "sunset-theme",
+    category: "app-theme",
     name: "Sunset Theme",
     description: "Warm orange and rose tones across the app.",
     price: 120,
@@ -67,6 +89,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "midnight-theme",
+    category: "app-theme",
     name: "Midnight Theme",
     description: "Deep navy tones for a calm night look.",
     price: 140,
@@ -87,6 +110,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "mint-theme",
+    category: "app-theme",
     name: "Mint Theme",
     description: "Fresh mint and teal accent colors.",
     price: 130,
@@ -102,6 +126,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "crimson-theme",
+    category: "app-theme",
     name: "Crimson Theme",
     description: "Bold red accents for a high-energy style.",
     price: 150,
@@ -118,6 +143,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "gold-theme",
+    category: "app-theme",
     name: "Gold Theme",
     description: "Premium gold highlights and warm neutrals.",
     price: 3.99,
@@ -134,6 +160,7 @@ const cosmetics: Cosmetic[] = [
   },
   {
     id: "violet-theme",
+    category: "app-theme",
     name: "Violet Theme",
     description: "Playful violet accents with soft contrast.",
     price: 2.99,
@@ -148,13 +175,78 @@ const cosmetics: Cosmetic[] = [
       mutedText: "#5b21b6",
     },
   },
+  {
+    id: "neon-grid-style",
+    category: "node-line-style",
+    name: "Neon Grid",
+    description: "Electric cyan links with bright magenta nodes.",
+    price: 180,
+    priceType: "coins",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#ecfeff",
+      nodeBorder: "#c026d3",
+      nodeDot: "#701a75",
+      line: "#06b6d4",
+      intersectingLine: "#f43f5e",
+    },
+  },
+  {
+    id: "amber-wire-style",
+    category: "node-line-style",
+    name: "Amber Wire",
+    description: "Warm amber links with deep cocoa node borders.",
+    price: 210,
+    priceType: "coins",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#fffbeb",
+      nodeBorder: "#78350f",
+      nodeDot: "#92400e",
+      line: "#d97706",
+      intersectingLine: "#dc2626",
+    },
+  },
+  {
+    id: "ocean-current-style",
+    category: "node-line-style",
+    name: "Ocean Current",
+    description: "Blue current links and cool slate nodes.",
+    price: 2.49,
+    priceType: "real-money",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#f0f9ff",
+      nodeBorder: "#1e3a8a",
+      nodeDot: "#0f172a",
+      line: "#0284c7",
+      intersectingLine: "#ef4444",
+    },
+  },
 ];
 
 export function resolveAppTheme(
   cosmeticId: string | null | undefined,
 ): AppThemePalette {
-  const selectedCosmetic = cosmetics.find((item) => item.id === cosmeticId);
+  const selectedCosmetic = cosmetics.find(
+    (item) => item.id === cosmeticId && item.category === "app-theme",
+  );
   return { ...DEFAULT_APP_THEME, ...(selectedCosmetic?.theme ?? {}) };
+}
+
+export function resolveNodeLineStyle(
+  cosmeticId: string | null | undefined,
+): NodeLineStylePalette {
+  const selectedCosmetic = cosmetics.find(
+    (item) => item.id === cosmeticId && item.category === "node-line-style",
+  );
+  return {
+    ...DEFAULT_NODE_LINE_STYLE,
+    ...(selectedCosmetic?.nodeLineStyle ?? {}),
+  };
 }
 
 export default cosmetics;

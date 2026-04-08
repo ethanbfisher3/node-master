@@ -2,10 +2,10 @@ Make have some way of multi-tangling the nodes, instead of just green and red
 Audio/Sound Effects
 Sharing results for time trials or smth
 Notifications
-Packs, each with a bunch of levels. 
 Buy different styles for the nodes (animals like dogs or cats, other pictures)
-If the nodes can't overlap, make the movement smoother, or make them able to pass by but it goes a little more transparent, etc.
 Fix async storage stuff
+In app purchases for coins
+Tweak the themes so the colors fit a little better
 
 
 Play Store stuff:

@@ -1,29 +1,35 @@
-import React from "react"
-import { Text, TouchableOpacity, View } from "react-native"
-import Svg, { Line } from "react-native-svg"
-import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native"
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import Svg, { Line } from "react-native-svg";
+import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native";
 
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
-import { DraggableNode } from "../components/DraggableNode"
-import { styles } from "../styles"
-import { Link, Node } from "../utils/gameLogic"
+import {
+  AppThemePalette,
+  DEFAULT_APP_THEME,
+  DEFAULT_NODE_LINE_STYLE,
+  NodeLineStylePalette,
+} from "../data/cosmetics";
+import { DraggableNode } from "../components/DraggableNode";
+import { styles } from "../styles";
+import { Link, Node } from "../utils/gameLogic";
 
 type GameScreenProps = {
-  level: number
-  coins: number
-  nodes: Node[]
-  links: Link[]
-  intersectingLinks: Set<string>
-  moves: number
-  trialTimeLeftSeconds?: number
-  noAdsOwned: boolean
-  theme?: AppThemePalette
-  onBackHome: () => void
-  onOpenLevels: () => void
-  onRestart: () => void
-  onNodeDrag: (id: string, x: number, y: number) => void
-  onNodeDragEnd: (id: string, x: number, y: number) => void
-}
+  level: number;
+  coins: number;
+  nodes: Node[];
+  links: Link[];
+  intersectingLinks: Set<string>;
+  moves: number;
+  trialTimeLeftSeconds?: number;
+  noAdsOwned: boolean;
+  theme?: AppThemePalette;
+  nodeLineStyle?: NodeLineStylePalette;
+  onBackHome: () => void;
+  onOpenLevels: () => void;
+  onRestart: () => void;
+  onNodeDrag: (id: string, x: number, y: number) => void;
+  onNodeDragEnd: (id: string, x: number, y: number) => void;
+};
 
 export function GameScreen({
   level,
@@ -35,13 +41,15 @@ export function GameScreen({
   trialTimeLeftSeconds,
   noAdsOwned,
   theme,
+  nodeLineStyle,
   onBackHome,
   onOpenLevels,
   onRestart,
   onNodeDrag,
   onNodeDragEnd,
 }: GameScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const activeNodeLineStyle = nodeLineStyle ?? DEFAULT_NODE_LINE_STYLE;
 
   return (
     <View
@@ -114,9 +122,9 @@ export function GameScreen({
       >
         <Svg style={styles.boardSvg}>
           {links.map((link) => {
-            const n1 = nodes.find((node) => node.id === link.node1Id)!
-            const n2 = nodes.find((node) => node.id === link.node2Id)!
-            const isIntersecting = intersectingLinks.has(link.id)
+            const n1 = nodes.find((node) => node.id === link.node1Id)!;
+            const n2 = nodes.find((node) => node.id === link.node2Id)!;
+            const isIntersecting = intersectingLinks.has(link.id);
 
             return (
               <Line
@@ -125,11 +133,15 @@ export function GameScreen({
                 y1={n1.y}
                 x2={n2.x}
                 y2={n2.y}
-                stroke={isIntersecting ? "#EF4444" : "#10B981"}
+                stroke={
+                  isIntersecting
+                    ? activeNodeLineStyle.intersectingLine
+                    : activeNodeLineStyle.line
+                }
                 strokeWidth={isIntersecting ? 6 : 4}
                 strokeLinecap="round"
               />
-            )
+            );
           })}
         </Svg>
 
@@ -137,6 +149,7 @@ export function GameScreen({
           <View key={node.id}>
             <DraggableNode
               node={node}
+              nodeStyle={activeNodeLineStyle}
               onDrag={onNodeDrag}
               onDragEnd={onNodeDragEnd}
             />
@@ -158,5 +171,5 @@ export function GameScreen({
         </Text>
       </View>
     </View>
-  )
+  );
 }

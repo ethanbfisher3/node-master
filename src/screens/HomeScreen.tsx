@@ -9,7 +9,7 @@ import {
   SunMoon,
 } from "lucide-react-native";
 import Feather from "@expo/vector-icons/Feather";
-
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
 import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import { styles } from "../styles";
 
@@ -84,12 +84,12 @@ export function HomeScreen({
         ]}
         onPress={onSelectLevels}
       >
-        <LayoutGrid size={24} color="white" />
         <Text
           style={[styles.mainButtonText, { color: activeTheme.buttonText }]}
         >
           QUICK PLAY
         </Text>
+        <FontAwesome5 name="play" size={24} color={activeTheme.buttonText} />
       </TouchableOpacity>
 
       <View style={styles.homeMenuGrid}>
@@ -100,7 +100,7 @@ export function HomeScreen({
           ]}
           onPress={onDailyWeekly}
         >
-          <SunMoon size={20} color={activeTheme.primary} />
+          <SunMoon size={20} color={activeTheme.text} />
           <Text
             style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
           >
@@ -114,7 +114,7 @@ export function HomeScreen({
           ]}
           onPress={onTimeTrial}
         >
-          <Bolt size={20} color={activeTheme.primary} />
+          <Bolt size={20} color={activeTheme.text} />
           <Text
             style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
           >
@@ -128,7 +128,7 @@ export function HomeScreen({
           ]}
           onPress={onStore}
         >
-          <ShoppingBag size={20} color={activeTheme.primary} />
+          <ShoppingBag size={20} color={activeTheme.text} />
           <Text
             style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
           >
@@ -142,7 +142,7 @@ export function HomeScreen({
           ]}
           onPress={onSettings}
         >
-          <Feather name="settings" size={20} color={activeTheme.primary} />
+          <Feather name="settings" size={20} color={activeTheme.text} />
           <Text
             style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
           >
