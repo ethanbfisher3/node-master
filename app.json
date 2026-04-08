@@ -11,8 +11,14 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.ethanbfisher3.node_master"
     },
-    "web": {}
+    "web": {},
+    "extra": {
+      "eas": {
+        "projectId": "3f47d194-2092-47a0-9422-090e3a3839e9"
+      }
+    }
   }
 }

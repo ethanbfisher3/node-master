@@ -1,10 +1,10 @@
-import { Dimensions, StyleSheet } from "react-native";
-import { NODE_RADIUS } from "./utils/gameLogic";
+import { Dimensions, StyleSheet } from "react-native"
+import { NODE_RADIUS } from "./utils/gameLogic"
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window")
 
-const GAME_WIDTH = 350;
-const GAME_HEIGHT = 500;
+const GAME_WIDTH = 350
+const GAME_HEIGHT = 500
 
 const styles = StyleSheet.create({
   container: {
@@ -155,7 +155,7 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   storeScrollContent: {
-    paddingHorizontal: 24,
+    paddingHorizontal: 12,
     gap: 16,
     paddingTop: 16,
     paddingBottom: 24,
@@ -719,7 +719,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 1,
   },
-});
+})
 
 export {
   SCREEN_WIDTH,
@@ -728,4 +728,4 @@ export {
   GAME_HEIGHT,
   NODE_RADIUS,
   styles,
-};
+}

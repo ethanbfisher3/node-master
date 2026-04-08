@@ -1,28 +1,29 @@
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import Svg, { Line } from "react-native-svg";
-import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native";
+import React from "react"
+import { Text, TouchableOpacity, View } from "react-native"
+import Svg, { Line } from "react-native-svg"
+import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native"
 
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
-import { DraggableNode } from "../components/DraggableNode";
-import { styles } from "../styles";
-import { Link, Node } from "../utils/gameLogic";
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
+import { DraggableNode } from "../components/DraggableNode"
+import { styles } from "../styles"
+import { Link, Node } from "../utils/gameLogic"
 
 type GameScreenProps = {
-  level: number;
-  coins: number;
-  nodes: Node[];
-  links: Link[];
-  intersectingLinks: Set<string>;
-  moves: number;
-  trialTimeLeftSeconds?: number;
-  noAdsOwned: boolean;
-  theme?: AppThemePalette;
-  onBackHome: () => void;
-  onOpenLevels: () => void;
-  onRestart: () => void;
-  onNodeDrag: (id: string, x: number, y: number) => void;
-};
+  level: number
+  coins: number
+  nodes: Node[]
+  links: Link[]
+  intersectingLinks: Set<string>
+  moves: number
+  trialTimeLeftSeconds?: number
+  noAdsOwned: boolean
+  theme?: AppThemePalette
+  onBackHome: () => void
+  onOpenLevels: () => void
+  onRestart: () => void
+  onNodeDrag: (id: string, x: number, y: number) => void
+  onNodeDragEnd: (id: string, x: number, y: number) => void
+}
 
 export function GameScreen({
   level,
@@ -38,8 +39,9 @@ export function GameScreen({
   onOpenLevels,
   onRestart,
   onNodeDrag,
+  onNodeDragEnd,
 }: GameScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const activeTheme = theme ?? DEFAULT_APP_THEME
 
   return (
     <View
@@ -112,9 +114,9 @@ export function GameScreen({
       >
         <Svg style={styles.boardSvg}>
           {links.map((link) => {
-            const n1 = nodes.find((node) => node.id === link.node1Id)!;
-            const n2 = nodes.find((node) => node.id === link.node2Id)!;
-            const isIntersecting = intersectingLinks.has(link.id);
+            const n1 = nodes.find((node) => node.id === link.node1Id)!
+            const n2 = nodes.find((node) => node.id === link.node2Id)!
+            const isIntersecting = intersectingLinks.has(link.id)
 
             return (
               <Line
@@ -127,13 +129,17 @@ export function GameScreen({
                 strokeWidth={isIntersecting ? 6 : 4}
                 strokeLinecap="round"
               />
-            );
+            )
           })}
         </Svg>
 
         {nodes.map((node) => (
           <View key={node.id}>
-            <DraggableNode node={node} allNodes={nodes} onDrag={onNodeDrag} />
+            <DraggableNode
+              node={node}
+              onDrag={onNodeDrag}
+              onDragEnd={onNodeDragEnd}
+            />
           </View>
         ))}
       </View>
@@ -152,5 +158,5 @@ export function GameScreen({
         </Text>
       </View>
     </View>
-  );
+  )
 }
