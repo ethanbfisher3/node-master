@@ -1,43 +1,43 @@
-import React from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native";
+import React from "react"
+import { ScrollView, Text, TouchableOpacity, View } from "react-native"
+import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native"
 
 import {
   AppThemePalette,
   CosmeticCategory,
   DEFAULT_APP_THEME,
   DEFAULT_NODE_LINE_STYLE,
-} from "../data/cosmetics";
-import { styles } from "../styles";
-import { Cosmetic } from "../data/cosmetics";
-import { LevelPack } from "../data/levelPacks";
-import coinPacks from "../data/coinPacks";
+} from "../data/cosmetics"
+import { styles } from "../styles"
+import { Cosmetic } from "../data/cosmetics"
+import { LevelPack } from "../data/levelPacks"
+import coinPacks from "../data/coinPacks"
 
 type SelectableLevelPack = LevelPack & {
-  owned: boolean;
-};
+  owned: boolean
+}
 
 type StoreScreenProps = {
-  coins: number;
-  noAdsOwned: boolean;
-  noAdsPrice: number;
-  cosmetics: Cosmetic[];
-  levelPacks: SelectableLevelPack[];
-  purchasedStoreItemIds: Set<string>;
-  equippedThemeCosmeticId: string | null;
-  equippedBoardCosmeticId: string | null;
-  onBack: () => void;
-  onBuyNoAds: () => void;
-  onBuyCosmetic: (cosmetic: Cosmetic) => void;
-  onBuyLevelPack: (levelPack: SelectableLevelPack) => void;
-  onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void;
-  onApplyDefaultTheme: () => void;
-  onApplyCosmetic: (cosmetic: Cosmetic) => void;
-  theme?: AppThemePalette;
-};
+  coins: number
+  noAdsOwned: boolean
+  noAdsPrice: number
+  cosmetics: Cosmetic[]
+  levelPacks: SelectableLevelPack[]
+  purchasedStoreItemIds: Set<string>
+  equippedThemeCosmeticId: string | null
+  equippedBoardCosmeticId: string | null
+  onBack: () => void
+  onBuyNoAds: () => void
+  onBuyCosmetic: (cosmetic: Cosmetic) => void
+  onBuyLevelPack: (levelPack: SelectableLevelPack) => void
+  onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void
+  onApplyDefaultTheme: () => void
+  onApplyCosmetic: (cosmetic: Cosmetic) => void
+  theme?: AppThemePalette
+}
 
 function isCategory(cosmetic: Cosmetic, category: CosmeticCategory): boolean {
-  return cosmetic.category === category;
+  return cosmetic.category === category
 }
 
 export function StoreScreen({
@@ -58,15 +58,15 @@ export function StoreScreen({
   onApplyCosmetic,
   theme,
 }: StoreScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME;
-  const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : [];
-  const levelPackItems = Array.isArray(levelPacks) ? levelPacks : [];
+  const activeTheme = theme ?? DEFAULT_APP_THEME
+  const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : []
+  const levelPackItems = Array.isArray(levelPacks) ? levelPacks : []
   const themeCosmetics = cosmeticItems.filter((cosmetic) =>
     isCategory(cosmetic, "app-theme"),
-  );
+  )
   const nodeLineStyleCosmetics = cosmeticItems.filter((cosmetic) =>
     isCategory(cosmetic, "node-line-style"),
-  );
+  )
 
   return (
     <View
@@ -191,12 +191,12 @@ export function StoreScreen({
           </TouchableOpacity>
         </View>
         {themeCosmetics.map((cosmetic) => {
-          const cosmeticItemKey = `cosmetic:${cosmetic.id}`;
-          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey);
-          const isEquipped = isOwned && equippedThemeCosmeticId === cosmetic.id;
+          const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
+          const isEquipped = isOwned && equippedThemeCosmeticId === cosmetic.id
           const cannotAffordCoins =
-            cosmetic.priceType === "coins" && coins < cosmetic.price;
-          const previewTheme = { ...DEFAULT_APP_THEME, ...cosmetic.theme };
+            cosmetic.priceType === "coins" && coins < cosmetic.price
+          const previewTheme = { ...DEFAULT_APP_THEME, ...cosmetic.theme }
 
           return (
             <View
@@ -258,22 +258,22 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          );
+          )
         })}
 
         <Text style={[styles.modeCardBody, { color: activeTheme.mutedText }]}>
           Node &amp; Line Styles
         </Text>
         {nodeLineStyleCosmetics.map((cosmetic) => {
-          const cosmeticItemKey = `cosmetic:${cosmetic.id}`;
-          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey);
-          const isApplied = isOwned && equippedBoardCosmeticId === cosmetic.id;
+          const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
+          const isApplied = isOwned && equippedBoardCosmeticId === cosmetic.id
           const cannotAffordCoins =
-            cosmetic.priceType === "coins" && coins < cosmetic.price;
+            cosmetic.priceType === "coins" && coins < cosmetic.price
           const previewStyle = {
             ...DEFAULT_NODE_LINE_STYLE,
             ...(cosmetic.nodeLineStyle ?? {}),
-          };
+          }
 
           return (
             <View
@@ -326,25 +326,25 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          );
+          )
         })}
 
         <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
           Packs
         </Text>
         {levelPackItems.map((levelPack) => {
-          if (levelPack.defaultOwned) return null;
+          if (levelPack.defaultOwned) return null
 
           const isOwned =
             levelPack.owned ||
             levelPack.defaultOwned ||
             (levelPack.storeItemId
               ? purchasedStoreItemIds.has(levelPack.storeItemId)
-              : false);
+              : false)
           const cannotAffordCoins =
             !isOwned &&
             levelPack.priceType === "coins" &&
-            coins < levelPack.price;
+            coins < levelPack.price
 
           return (
             <View
@@ -399,7 +399,7 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          );
+          )
         })}
 
         <View
@@ -439,17 +439,17 @@ export function StoreScreen({
                     { color: activeTheme.cardText },
                   ]}
                 >
-                  {coinPack.name}
+                  {coinPack.name} - {coinPack.coins} coins
                 </Text>
               </View>
-              <Text
+              {/* <Text
                 style={[
                   styles.modeCardBody,
                   { color: activeTheme.cardMutedText },
                 ]}
               >
                 {coinPack.description}
-              </Text>
+              </Text> */}
 
               <TouchableOpacity
                 style={[
@@ -465,9 +465,9 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          );
+          )
         })}
       </ScrollView>
     </View>
-  );
+  )
 }
