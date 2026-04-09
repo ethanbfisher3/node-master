@@ -1,6 +1,7 @@
-import React from "react"
+import React, { useCallback, useEffect, useRef } from "react"
 import { ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native"
+import { Audio } from "expo-av"
 
 import {
   AppThemePalette,
@@ -59,6 +60,14 @@ export function StoreScreen({
   theme,
 }: StoreScreenProps) {
   const activeTheme = theme ?? DEFAULT_APP_THEME
+  const themeChangeSoundRef = useRef<Audio.Sound | null>(null)
+  const isThemeChangeSoundLoadingRef = useRef(false)
+  const previousEquippedThemeIdRef = useRef<string | null | undefined>(
+    undefined,
+  )
+  const stopThemeChangeSoundTimeoutRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null)
   const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : []
   const levelPackItems = Array.isArray(levelPacks) ? levelPacks : []
   const themeCosmetics = cosmeticItems.filter((cosmetic) =>
@@ -67,6 +76,77 @@ export function StoreScreen({
   const nodeLineStyleCosmetics = cosmeticItems.filter((cosmetic) =>
     isCategory(cosmetic, "node-line-style"),
   )
+
+  const clearThemeChangeSoundStopTimeout = useCallback(() => {
+    if (!stopThemeChangeSoundTimeoutRef.current) {
+      return
+    }
+
+    clearTimeout(stopThemeChangeSoundTimeoutRef.current)
+    stopThemeChangeSoundTimeoutRef.current = null
+  }, [])
+
+  const playThemeChangeSnippet = useCallback(async () => {
+    try {
+      if (!themeChangeSoundRef.current) {
+        if (isThemeChangeSoundLoadingRef.current) {
+          return
+        }
+
+        isThemeChangeSoundLoadingRef.current = true
+        const { sound } = await Audio.Sound.createAsync(
+          require("../sounds/theme_change.mp3"),
+          {
+            shouldPlay: false,
+            volume: 0.3,
+          },
+        )
+        themeChangeSoundRef.current = sound
+      }
+
+      clearThemeChangeSoundStopTimeout()
+
+      await themeChangeSoundRef.current.setPositionAsync(0)
+      await themeChangeSoundRef.current.playAsync()
+
+      stopThemeChangeSoundTimeoutRef.current = setTimeout(() => {
+        const activeSound = themeChangeSoundRef.current
+        if (!activeSound) {
+          return
+        }
+
+        void activeSound.pauseAsync()
+        void activeSound.setPositionAsync(0)
+      }, 500)
+    } catch {
+      // Ignore playback errors so theme application remains responsive.
+    } finally {
+      isThemeChangeSoundLoadingRef.current = false
+    }
+  }, [clearThemeChangeSoundStopTimeout])
+
+  useEffect(() => {
+    const previousThemeId = previousEquippedThemeIdRef.current
+    if (previousThemeId === undefined) {
+      previousEquippedThemeIdRef.current = equippedThemeCosmeticId
+      return
+    }
+
+    if (previousThemeId === equippedThemeCosmeticId) {
+      return
+    }
+
+    previousEquippedThemeIdRef.current = equippedThemeCosmeticId
+    void playThemeChangeSnippet()
+  }, [equippedThemeCosmeticId, playThemeChangeSnippet])
+
+  useEffect(() => {
+    return () => {
+      clearThemeChangeSoundStopTimeout()
+      void themeChangeSoundRef.current?.unloadAsync()
+      themeChangeSoundRef.current = null
+    }
+  }, [clearThemeChangeSoundStopTimeout])
 
   return (
     <View

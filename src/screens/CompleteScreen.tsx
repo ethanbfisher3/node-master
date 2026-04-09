@@ -1,29 +1,29 @@
-import React from "react";
-import { Text, TouchableOpacity, View } from "react-native";
-import { ChevronLeft, ChevronRight, Coins, Trophy } from "lucide-react-native";
+import React from "react"
+import { Text, TouchableOpacity, View } from "react-native"
+import { ChevronLeft, ChevronRight, Coins, Trophy } from "lucide-react-native"
 
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
-import { styles } from "../styles";
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
+import { styles } from "../styles"
 
 type CompleteScreenProps = {
-  level: number;
-  moves: number;
-  theme?: AppThemePalette;
-  onHome: () => void;
-  onNextLevel: () => void;
-};
+  level: number
+  nodeCount: number
+  theme?: AppThemePalette
+  onHome: () => void
+  onNextLevel: () => void
+}
 
 export function CompleteScreen({
   level,
-  moves,
+  nodeCount,
   theme,
   onHome,
   onNextLevel,
 }: CompleteScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME;
-  const baseReward = level * 10;
-  const moveBonus = Math.max(0, 50 - moves);
-  const totalReward = baseReward + moveBonus;
+  const activeTheme = theme ?? DEFAULT_APP_THEME
+  const baseReward = 5
+  const nodeBonus = nodeCount
+  const totalReward = baseReward + nodeBonus
 
   return (
     <View
@@ -68,10 +68,10 @@ export function CompleteScreen({
           <Text
             style={[styles.rewardLabel, { color: activeTheme.cardMutedText }]}
           >
-            Move Bonus
+            Node Bonus
           </Text>
           <Text style={[styles.rewardValue, { color: activeTheme.cardText }]}>
-            +{moveBonus}
+            +{nodeBonus}
           </Text>
         </View>
         <View
@@ -125,5 +125,5 @@ export function CompleteScreen({
         </TouchableOpacity>
       </View>
     </View>
-  );
+  )
 }

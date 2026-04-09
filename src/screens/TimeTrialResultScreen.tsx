@@ -1,23 +1,23 @@
-import React from "react";
-import { Share, Text, TouchableOpacity, View } from "react-native";
-import { ChevronLeft, Share2, Trophy } from "lucide-react-native";
+import React from "react"
+import { Share, Text, TouchableOpacity, View } from "react-native"
+import { ChevronLeft, Share2, Trophy } from "lucide-react-native"
 
-import { styles } from "../styles";
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
+import { styles } from "../styles"
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
 
-const APP_DEEP_LINK = "nodemaster://home";
+const APP_DEEP_LINK = "nodemaster://home"
 const PLAY_STORE_URL =
-  "https://play.google.com/store/apps/details?id=com.ethanbfisher3.node_master";
+  "https://play.google.com/store/apps/details?id=com.ethanbfisher3.node_master"
 
 type TimeTrialResultScreenProps = {
-  solvedCount: number;
-  earnedCoins: number;
-  nodeCount: number | null;
-  durationSeconds: number;
-  theme?: AppThemePalette;
-  onHome: () => void;
-  onPlayAgain: () => void;
-};
+  solvedCount: number
+  earnedCoins: number
+  nodeCount: number | null
+  durationSeconds: number
+  theme?: AppThemePalette
+  onHome: () => void
+  onPlayAgain: () => void
+}
 
 export function TimeTrialResultScreen({
   solvedCount,
@@ -28,20 +28,20 @@ export function TimeTrialResultScreen({
   onHome,
   onPlayAgain,
 }: TimeTrialResultScreenProps) {
-  const nodeCountLabel = nodeCount === null ? "Unknown" : String(nodeCount);
-  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const nodeCountLabel = nodeCount === null ? "Unknown" : String(nodeCount)
+  const activeTheme = theme ?? DEFAULT_APP_THEME
 
   const handleShareScore = async () => {
     try {
-      const message = `I just solved ${solvedCount} puzzles in Node Master Time Trial (${nodeCountLabel} nodes, ${durationSeconds}s)! Can you beat my score?\n\nOpen in app: ${APP_DEEP_LINK}\nGet it on Google Play: ${PLAY_STORE_URL}`;
+      const message = `I just solved ${solvedCount} puzzles in Node Master Time Trial (${nodeCountLabel} nodes, ${durationSeconds}s)! Can you beat my score?\n\nOpen in app: ${APP_DEEP_LINK}\nGet it on Google Play: ${PLAY_STORE_URL}`
       await Share.share({
         message,
         title: "Node Master Time Trial Result",
-      });
+      })
     } catch {
       // Ignore share-sheet failures so the result flow is uninterrupted.
     }
-  };
+  }
 
   return (
     <View style={styles.completeContainer}>
@@ -91,15 +91,15 @@ export function TimeTrialResultScreen({
         <TouchableOpacity style={styles.nextButton} onPress={onPlayAgain}>
           <Text style={[styles.nextButtonText]}>TRY AGAIN</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.nextButton, { marginTop: 14, width: "100%" }]}
-          onPress={handleShareScore}
-        >
-          <Share2 size={22} color="white" />
-          <Text style={styles.nextButtonText}>SHARE SCORE</Text>
-        </TouchableOpacity>
       </View>
+
+      <TouchableOpacity
+        style={[styles.nextButton, { marginTop: 14, width: "100%" }]}
+        onPress={handleShareScore}
+      >
+        <Share2 size={22} color="white" />
+        <Text style={styles.nextButtonText}>SHARE SCORE</Text>
+      </TouchableOpacity>
     </View>
-  );
+  )
 }
