@@ -62,7 +62,13 @@ export function SettingsScreen({ onBack, theme }: SettingsScreenProps) {
   return (
     <View style={styles.levelsContainer}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <TouchableOpacity
+          onPress={onBack}
+          style={[
+            styles.backButton,
+            { backgroundColor: activeTheme.surfaceAlt },
+          ]}
+        >
           <ArrowLeft size={24} color="#64748b" />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: activeTheme.cardText }]}>

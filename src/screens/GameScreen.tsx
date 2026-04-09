@@ -67,7 +67,7 @@ export function GameScreen({
               { backgroundColor: activeTheme.surfaceAlt },
             ]}
           >
-            <ArrowLeft size={20} color={activeTheme.mutedText} />
+            <ArrowLeft size={24} color={activeTheme.mutedText} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onOpenLevels}
@@ -76,7 +76,7 @@ export function GameScreen({
               { backgroundColor: activeTheme.surfaceAlt },
             ]}
           >
-            <LayoutGrid size={20} color={activeTheme.mutedText} />
+            <LayoutGrid size={24} color={activeTheme.mutedText} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={onRestart}
@@ -85,7 +85,7 @@ export function GameScreen({
               { backgroundColor: activeTheme.surfaceAlt },
             ]}
           >
-            <RotateCcw size={20} color={activeTheme.mutedText} />
+            <RotateCcw size={24} color={activeTheme.mutedText} />
           </TouchableOpacity>
         </View>
 

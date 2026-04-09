@@ -79,7 +79,7 @@ export function TimeTrialScreen({
                   <Text
                     style={[
                       styles.timeTrialDurationText,
-                      { color: activeTheme.primary },
+                      { color: activeTheme.text },
                     ]}
                   >
                     {labelForDuration(duration)}

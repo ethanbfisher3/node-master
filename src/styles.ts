@@ -29,7 +29,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 20,
-    elevation: 10,
   },
   logoCircle: {
     position: "absolute",
@@ -57,7 +56,7 @@ const styles = StyleSheet.create({
   coinBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fef3c7",
+    backgroundColor: "#fdeeb1",
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -122,7 +121,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     padding: 24,
     gap: 16,
   },
@@ -397,7 +396,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.14,
     shadowRadius: 10,
-    elevation: 4,
   },
   levelButtonText: {
     fontSize: 18,
@@ -426,6 +424,7 @@ const styles = StyleSheet.create({
   },
   gameHeaderLeft: {
     flexDirection: "row",
+    alignItems: "flex-start",
     gap: 8,
     flex: 1,
   },
@@ -456,8 +455,8 @@ const styles = StyleSheet.create({
   gameCoinBadge: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fffbeb",
-    padding: 12,
+    backgroundColor: "#fdeeb1",
+    padding: 8,
     borderRadius: 10,
     justifyContent: "flex-end",
   },
@@ -502,7 +501,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 6,
-    elevation: 3,
   },
   nodeDot: {
     width: 4,
@@ -552,7 +550,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 20,
-    elevation: 10,
   },
   completeTitle: {
     fontSize: 32,
@@ -610,8 +607,10 @@ const styles = StyleSheet.create({
   },
   completeButtonsRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    gap: 16,
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    gap: 8,
+    flexWrap: "wrap",
     width: "100%",
   },
   nextButton: {
@@ -625,8 +624,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
-    elevation: 5,
-    gap: 12,
+    gap: 8,
   },
   nextButtonText: {
     color: "white",
@@ -664,7 +662,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 18 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
-    elevation: 12,
   },
   popupAdTag: {
     fontSize: 11,

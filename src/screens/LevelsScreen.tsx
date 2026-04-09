@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { ArrowLeft, Star } from "lucide-react-native";
 
@@ -37,8 +37,35 @@ export function LevelsScreen({
   theme,
 }: LevelsScreenProps) {
   const activeTheme = theme ?? DEFAULT_APP_THEME;
-  const levelsToRender =
-    levelIds ?? PRE_GENERATED_LEVELS.map((levelEntry) => levelEntry.id);
+  const levelsToRender = useMemo(
+    () => levelIds ?? PRE_GENERATED_LEVELS.map((levelEntry) => levelEntry.id),
+    [levelIds],
+  );
+
+  const levelsToRenderSet = useMemo(
+    () => new Set(levelsToRender),
+    [levelsToRender],
+  );
+
+  const levelsByNodeCount = useMemo(() => {
+    const grouped = new Map<number, number[]>();
+
+    for (const level of PRE_GENERATED_LEVELS) {
+      if (!levelsToRenderSet.has(level.id)) {
+        continue;
+      }
+
+      const nodeCount = level.nodes.length;
+      const existing = grouped.get(nodeCount);
+      if (existing) {
+        existing.push(level.id);
+      } else {
+        grouped.set(nodeCount, [level.id]);
+      }
+    }
+
+    return grouped;
+  }, [levelsToRenderSet]);
 
   const renderLevelButton = (
     levelId: number,
@@ -106,11 +133,7 @@ export function LevelsScreen({
       >
         {showNodeHeaders ? (
           NODE_COUNTS.map((nodeCount) => {
-            const filteredLevels = PRE_GENERATED_LEVELS.filter(
-              (level) =>
-                level.nodes.length === nodeCount &&
-                levelsToRender.includes(level.id),
-            );
+            const filteredLevelIds = levelsByNodeCount.get(nodeCount) ?? [];
 
             return (
               <View key={nodeCount} style={styles.difficultySection}>
@@ -140,7 +163,9 @@ export function LevelsScreen({
                   />
                 </View>
                 <View style={styles.levelGrid}>
-                  {filteredLevels.map((level) => renderLevelButton(level.id))}
+                  {filteredLevelIds.map((levelId) =>
+                    renderLevelButton(levelId),
+                  )}
                 </View>
               </View>
             );

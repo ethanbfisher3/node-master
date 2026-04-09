@@ -5,9 +5,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { Modal, SafeAreaView, StatusBar, View, Text } from "react-native";
+import { Modal, StatusBar, View, Text, Platform } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
 import { LevelData, PRE_GENERATED_LEVELS } from "./data/levels";
 import { CompleteScreen } from "./screens/CompleteScreen";
 import { GameScreen } from "./screens/GameScreen";
@@ -92,6 +92,93 @@ type PersistedPlayerProgress = {
 type CompletionMode = "classic" | "daily" | "weekly";
 
 const DEFAULT_CLASSIC_PACK_ID = "starter-1";
+const MIN_TIME_TRIAL_INTERSECTIONS = 2;
+const MAX_TIME_TRIAL_GENERATION_ATTEMPTS = 24;
+
+function enrichTimeTrialLinks(nodes: Node[], links: Link[]): Link[] {
+  const nextLinks = JSON.parse(JSON.stringify(links)) as Link[];
+  const targetLinkCount = Math.min(
+    nodes.length + Math.max(2, Math.floor(nodes.length / 2)),
+    20,
+  );
+
+  let attempts = 0;
+  while (nextLinks.length < targetLinkCount && attempts < 240) {
+    attempts++;
+    const firstNode = nodes[Math.floor(Math.random() * nodes.length)];
+    const secondNode = nodes[Math.floor(Math.random() * nodes.length)];
+
+    if (!firstNode || !secondNode || firstNode.id === secondNode.id) {
+      continue;
+    }
+
+    const exists = nextLinks.some(
+      (entry) =>
+        (entry.node1Id === firstNode.id && entry.node2Id === secondNode.id) ||
+        (entry.node1Id === secondNode.id && entry.node2Id === firstNode.id),
+    );
+
+    if (exists) {
+      continue;
+    }
+
+    nextLinks.push({
+      id: `tt-link-${nextLinks.length}-${attempts}`,
+      node1Id: firstNode.id,
+      node2Id: secondNode.id,
+      color: "#94a3b8",
+    });
+  }
+
+  return nextLinks;
+}
+
+function getIntersectingLinkIds(
+  currentNodes: Node[],
+  currentLinks: Link[],
+): Set<string> {
+  const intersections = new Set<string>();
+
+  for (let i = 0; i < currentLinks.length; i++) {
+    for (let j = i + 1; j < currentLinks.length; j++) {
+      const firstLink = currentLinks[i];
+      const secondLink = currentLinks[j];
+
+      if (
+        firstLink.node1Id === secondLink.node1Id ||
+        firstLink.node1Id === secondLink.node2Id ||
+        firstLink.node2Id === secondLink.node1Id ||
+        firstLink.node2Id === secondLink.node2Id
+      ) {
+        continue;
+      }
+
+      const firstNodeA = currentNodes.find(
+        (node) => node.id === firstLink.node1Id,
+      );
+      const firstNodeB = currentNodes.find(
+        (node) => node.id === firstLink.node2Id,
+      );
+      const secondNodeA = currentNodes.find(
+        (node) => node.id === secondLink.node1Id,
+      );
+      const secondNodeB = currentNodes.find(
+        (node) => node.id === secondLink.node2Id,
+      );
+
+      if (!firstNodeA || !firstNodeB || !secondNodeA || !secondNodeB) {
+        continue;
+      }
+
+      if (doIntersect(firstNodeA, firstNodeB, secondNodeA, secondNodeB)) {
+        intersections.add(firstLink.id);
+        intersections.add(secondLink.id);
+      }
+    }
+  }
+
+  return intersections;
+}
 
 function toNonNegativeInt(value: unknown, fallback: number): number {
   const parsed =
@@ -331,38 +418,6 @@ async function writePlayerProgress(
   }
 }
 
-function seededShuffle<T>(items: T[], seed: number): T[] {
-  const result = [...items];
-  let state = seed;
-
-  const rand = () => {
-    state = (state * 1664525 + 1013904223) >>> 0;
-    return state / 4294967296;
-  };
-
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(rand() * (i + 1));
-    [result[i], result[j]] = [result[j], result[i]];
-  }
-
-  return result;
-}
-
-function getDailySeed(date: Date): number {
-  const y = date.getFullYear();
-  const m = date.getMonth() + 1;
-  const d = date.getDate();
-  return y * 10000 + m * 100 + d;
-}
-
-function getWeekSeed(date: Date): number {
-  const copy = new Date(date);
-  const day = copy.getDay();
-  const mondayOffset = day === 0 ? -6 : 1 - day;
-  copy.setDate(copy.getDate() + mondayOffset);
-  return getDailySeed(copy) * 7;
-}
-
 export default function App() {
   const [view, setView] = useState<ViewType>("home");
   const [playMode, setPlayMode] = useState<PlayMode>("classic");
@@ -464,6 +519,21 @@ export default function App() {
   }, [levelPacksWithOwnership, selectedLevelPackId]);
 
   useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+    if (Platform.OS === "ios") {
+      Purchases.configure({
+        apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS,
+      });
+    } else if (Platform.OS === "android") {
+      Purchases.configure({
+        apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID,
+      });
+    }
+
+    console.log("Purchases configured");
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     const hydrateProgress = async () => {
@@ -481,9 +551,7 @@ export default function App() {
       setCompletedLevelKeys(new Set(progress.completedLevelKeys));
       setCompletedLevelsCount(progress.completedLevelsCount);
       setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd);
-      setLastInterstitialAdAt(
-        progress.lastInterstitialAdAt ?? Date.now(),
-      );
+      setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now());
       setIsProgressHydrated(true);
     };
 
@@ -572,34 +640,87 @@ export default function App() {
   }, [clearCompletionHold]);
 
   const loadLevel = useCallback(
-    (levelId: number, mode: PlayMode) => {
+    (levelId: number, mode: PlayMode, forcedTimeTrialNodeCount?: number) => {
       clearCompletionHold();
       let nextNodes: Node[] = [];
       let nextLinks: Link[] = [];
 
-      if (mode === "daily" || mode === "weekly") {
+      if (mode === "daily" || mode === "weekly" || mode === "time-trial") {
         const cacheKey = `${mode}-${levelId}`;
-        const cachedLevel = generatedModeLevelsRef.current.get(cacheKey);
+        const shouldUseCache = mode !== "time-trial";
+        const cachedLevel = shouldUseCache
+          ? generatedModeLevelsRef.current.get(cacheKey)
+          : undefined;
 
         if (cachedLevel) {
           nextNodes = JSON.parse(JSON.stringify(cachedLevel.nodes));
           nextLinks = JSON.parse(JSON.stringify(cachedLevel.links));
         } else {
-          const nodeCount = 7 + Math.floor(Math.random() * 7);
-          const generatorLevel = (nodeCount - 4) * 2;
-          const generatedLevel = generateLevel(
-            generatorLevel,
-            GAME_WIDTH,
-            GAME_HEIGHT,
-          );
+          const nodeCount =
+            mode === "time-trial"
+              ? Math.max(
+                  5,
+                  forcedTimeTrialNodeCount ?? timeTrialState.nodeCount ?? 7,
+                )
+              : 7 + Math.floor(Math.random() * 7);
 
-          generatedModeLevelsRef.current.set(cacheKey, {
-            nodes: JSON.parse(JSON.stringify(generatedLevel.nodes)),
-            links: JSON.parse(JSON.stringify(generatedLevel.links)),
-          });
+          if (mode === "time-trial") {
+            let generatedNodes: Node[] = [];
+            let generatedLinks: Link[] = [];
 
-          nextNodes = JSON.parse(JSON.stringify(generatedLevel.nodes));
-          nextLinks = JSON.parse(JSON.stringify(generatedLevel.links));
+            for (
+              let attempt = 0;
+              attempt < MAX_TIME_TRIAL_GENERATION_ATTEMPTS;
+              attempt++
+            ) {
+              // Keep the requested node count exact for time trial generation.
+              const generatorLevel = (nodeCount - 4) * 2;
+              const generatedLevel = generateLevel(
+                generatorLevel,
+                GAME_WIDTH,
+                GAME_HEIGHT,
+              );
+              const enrichedLinks = enrichTimeTrialLinks(
+                generatedLevel.nodes,
+                generatedLevel.links,
+              );
+
+              const normalizedAttemptNodes = normalizeNodePositions(
+                JSON.parse(JSON.stringify(generatedLevel.nodes)),
+                GAME_WIDTH,
+                GAME_HEIGHT,
+              );
+              const attemptIntersections = getIntersectingLinkIds(
+                normalizedAttemptNodes,
+                enrichedLinks,
+              );
+
+              generatedNodes = normalizedAttemptNodes;
+              generatedLinks = JSON.parse(JSON.stringify(enrichedLinks));
+
+              if (attemptIntersections.size >= MIN_TIME_TRIAL_INTERSECTIONS) {
+                break;
+              }
+            }
+
+            nextNodes = generatedNodes;
+            nextLinks = generatedLinks;
+          } else {
+            const generatorLevel = (nodeCount - 4) * 2;
+            const generatedLevel = generateLevel(
+              generatorLevel,
+              GAME_WIDTH,
+              GAME_HEIGHT,
+            );
+
+            generatedModeLevelsRef.current.set(cacheKey, {
+              nodes: JSON.parse(JSON.stringify(generatedLevel.nodes)),
+              links: JSON.parse(JSON.stringify(generatedLevel.links)),
+            });
+
+            nextNodes = JSON.parse(JSON.stringify(generatedLevel.nodes));
+            nextLinks = JSON.parse(JSON.stringify(generatedLevel.links));
+          }
         }
       } else {
         const levelData = levelById.get(levelId) ?? PRE_GENERATED_LEVELS[0];
@@ -607,11 +728,10 @@ export default function App() {
         nextLinks = JSON.parse(JSON.stringify(levelData.links));
       }
 
-      const normalizedNodes = normalizeNodePositions(
-        nextNodes,
-        GAME_WIDTH,
-        GAME_HEIGHT,
-      );
+      const normalizedNodes =
+        mode === "time-trial"
+          ? nextNodes
+          : normalizeNodePositions(nextNodes, GAME_WIDTH, GAME_HEIGHT);
 
       setNodes(normalizedNodes);
       setLinks(nextLinks);
@@ -622,17 +742,17 @@ export default function App() {
       setView("game");
       checkIntersections(normalizedNodes, nextLinks, false);
     },
-    [clearCompletionHold, levelById],
+    [clearCompletionHold, levelById, timeTrialState.nodeCount],
   );
 
   const startSession = useCallback(
-    (mode: PlayMode, levelIds: number[]) => {
+    (mode: PlayMode, levelIds: number[], forcedTimeTrialNodeCount?: number) => {
       if (levelIds.length === 0) {
         return;
       }
       setSessionLevelIds(levelIds);
       setSessionIndex(0);
-      loadLevel(levelIds[0], mode);
+      loadLevel(levelIds[0], mode, forcedTimeTrialNodeCount);
     },
     [loadLevel],
   );
@@ -676,14 +796,10 @@ export default function App() {
 
   const startTimeTrial = useCallback(
     (nodeCount: number, duration: TrialDuration) => {
-      const seed = getDailySeed(new Date()) + duration;
-      const matchingLevels = PRE_GENERATED_LEVELS.filter(
-        (entry) => entry.nodes.length === nodeCount,
-      ).map((entry) => entry.id);
-      const ordered = seededShuffle(matchingLevels, seed);
-      if (ordered.length === 0) {
-        return;
-      }
+      const ordered = Array.from(
+        { length: Math.max(PRE_GENERATED_LEVELS.length, 20) },
+        (_, index) => index + 1,
+      );
 
       setTimeTrialState({
         nodeCount,
@@ -693,7 +809,7 @@ export default function App() {
         solvedCount: 0,
         earnedCoins: 0,
       });
-      startSession("time-trial", ordered);
+      startSession("time-trial", ordered, nodeCount);
     },
     [startSession],
   );
@@ -856,41 +972,7 @@ export default function App() {
       currentLinks: Link[],
       triggerWin: boolean = true,
     ) => {
-      const intersections = new Set<string>();
-
-      for (let i = 0; i < currentLinks.length; i++) {
-        for (let j = i + 1; j < currentLinks.length; j++) {
-          const firstLink = currentLinks[i];
-          const secondLink = currentLinks[j];
-
-          const firstNodeA = currentNodes.find(
-            (node) => node.id === firstLink.node1Id,
-          )!;
-          const firstNodeB = currentNodes.find(
-            (node) => node.id === firstLink.node2Id,
-          )!;
-          const secondNodeA = currentNodes.find(
-            (node) => node.id === secondLink.node1Id,
-          )!;
-          const secondNodeB = currentNodes.find(
-            (node) => node.id === secondLink.node2Id,
-          )!;
-
-          if (
-            firstLink.node1Id === secondLink.node1Id ||
-            firstLink.node1Id === secondLink.node2Id ||
-            firstLink.node2Id === secondLink.node1Id ||
-            firstLink.node2Id === secondLink.node2Id
-          ) {
-            continue;
-          }
-
-          if (doIntersect(firstNodeA, firstNodeB, secondNodeA, secondNodeB)) {
-            intersections.add(firstLink.id);
-            intersections.add(secondLink.id);
-          }
-        }
-      }
+      const intersections = getIntersectingLinkIds(currentNodes, currentLinks);
 
       setIntersectingLinks(intersections);
 
@@ -1291,6 +1373,8 @@ export default function App() {
         <TimeTrialResultScreen
           solvedCount={timeTrialState.solvedCount}
           earnedCoins={timeTrialState.earnedCoins}
+          nodeCount={timeTrialState.nodeCount}
+          durationSeconds={timeTrialState.durationSeconds}
           onHome={() => setView("home")}
           onPlayAgain={() => setView("time-trial")}
         />
