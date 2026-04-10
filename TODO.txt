@@ -3,6 +3,9 @@ Notifications
 Buy different styles for the nodes (animals like dogs or cats, other pictures)
 In app purchases for coins
 Test settings
+Animation for when the user buys coins or ad removal
+Fix levels to make sure level packs generate unique levels
+Theme packs to unlock a bunch of themes (light pack, dark pack)
 
 
 Play Store stuff:

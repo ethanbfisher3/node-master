@@ -1,13 +1,14 @@
-import React, { useCallback, useEffect, useRef } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ScrollView, Text, TouchableOpacity, View } from "react-native"
 import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native"
 import { Audio } from "expo-av"
 
 import {
   AppThemePalette,
-  CosmeticCategory,
   DEFAULT_APP_THEME,
   DEFAULT_NODE_LINE_STYLE,
+  ThemePack,
+  THEME_PACKS,
 } from "../data/cosmetics"
 import { styles } from "../styles"
 import { Cosmetic } from "../data/cosmetics"
@@ -22,6 +23,7 @@ type StoreScreenProps = {
   coins: number
   noAdsOwned: boolean
   noAdsPrice: number
+  noAdsPriceLabel: string | null
   cosmetics: Cosmetic[]
   levelPacks: SelectableLevelPack[]
   purchasedStoreItemIds: Set<string>
@@ -30,21 +32,22 @@ type StoreScreenProps = {
   onBack: () => void
   onBuyNoAds: () => void
   onBuyCosmetic: (cosmetic: Cosmetic) => void
+  onBuyThemePack: (themePack: ThemePack) => void
   onBuyLevelPack: (levelPack: SelectableLevelPack) => void
   onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void
+  coinPackPriceLabels: Record<string, string>
+  levelPackPriceLabels: Record<string, string>
+  themePackPriceLabels: Record<string, string>
   onApplyDefaultTheme: () => void
   onApplyCosmetic: (cosmetic: Cosmetic) => void
   theme?: AppThemePalette
-}
-
-function isCategory(cosmetic: Cosmetic, category: CosmeticCategory): boolean {
-  return cosmetic.category === category
 }
 
 export function StoreScreen({
   coins,
   noAdsOwned,
   noAdsPrice,
+  noAdsPriceLabel,
   cosmetics,
   levelPacks,
   purchasedStoreItemIds,
@@ -52,14 +55,21 @@ export function StoreScreen({
   equippedBoardCosmeticId,
   onBack,
   onBuyNoAds,
+  onBuyThemePack,
   onBuyCosmetic,
   onBuyLevelPack,
   onBuyCoinPack,
+  coinPackPriceLabels,
+  levelPackPriceLabels,
+  themePackPriceLabels,
   onApplyDefaultTheme,
   onApplyCosmetic,
   theme,
 }: StoreScreenProps) {
   const activeTheme = theme ?? DEFAULT_APP_THEME
+  const [expandedThemePackId, setExpandedThemePackId] = useState<
+    ThemePack["id"] | null
+  >(null)
   const themeChangeSoundRef = useRef<Audio.Sound | null>(null)
   const isThemeChangeSoundLoadingRef = useRef(false)
   const previousEquippedThemeIdRef = useRef<string | null | undefined>(
@@ -70,11 +80,19 @@ export function StoreScreen({
   > | null>(null)
   const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : []
   const levelPackItems = Array.isArray(levelPacks) ? levelPacks : []
-  const themeCosmetics = cosmeticItems.filter((cosmetic) =>
-    isCategory(cosmetic, "app-theme"),
+  const cosmeticsById = useMemo(
+    () => new Map(cosmeticItems.map((cosmetic) => [cosmetic.id, cosmetic])),
+    [cosmeticItems],
   )
-  const nodeLineStyleCosmetics = cosmeticItems.filter((cosmetic) =>
-    isCategory(cosmetic, "node-line-style"),
+  const themePacksWithCosmetics = useMemo(
+    () =>
+      THEME_PACKS.map((themePack) => ({
+        ...themePack,
+        cosmetics: themePack.cosmeticIds
+          .map((cosmeticId) => cosmeticsById.get(cosmeticId))
+          .filter((entry): entry is Cosmetic => Boolean(entry)),
+      })),
+    [cosmeticsById],
   )
 
   const clearThemeChangeSoundStopTimeout = useCallback(() => {
@@ -202,12 +220,11 @@ export function StoreScreen({
           <TouchableOpacity
             style={[
               styles.modeCardButton,
-              (noAdsOwned || coins < noAdsPrice) &&
-                styles.modeCardButtonDisabled,
+              noAdsOwned && styles.modeCardButtonDisabled,
               { backgroundColor: activeTheme.primary },
             ]}
             onPress={onBuyNoAds}
-            disabled={noAdsOwned || coins < noAdsPrice}
+            disabled={noAdsOwned}
           >
             {noAdsOwned ? (
               <BadgeCheck size={18} color="white" />
@@ -215,15 +232,17 @@ export function StoreScreen({
               <ShoppingBag size={18} color="white" />
             )}
             <Text style={styles.modeCardButtonText}>
-              {noAdsOwned ? "PURCHASED" : `$${noAdsPrice.toFixed(2)}`}
+              {noAdsOwned
+                ? "PURCHASED"
+                : (noAdsPriceLabel ?? `$${noAdsPrice.toFixed(2)}`)}
             </Text>
           </TouchableOpacity>
         </View>
         <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
-          Cosmetics
+          Theme Packs
         </Text>
         <Text style={[styles.modeCardBody, { color: activeTheme.mutedText }]}>
-          Themes
+          Choose a pack to unlock and browse included themes and node styles.
         </Text>
         <View
           style={[
@@ -270,90 +289,11 @@ export function StoreScreen({
             </Text>
           </TouchableOpacity>
         </View>
-        {themeCosmetics.map((cosmetic) => {
-          const cosmeticItemKey = `cosmetic:${cosmetic.id}`
-          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
-          const isEquipped = isOwned && equippedThemeCosmeticId === cosmetic.id
-          const cannotAffordCoins =
-            cosmetic.priceType === "coins" && coins < cosmetic.price
-          const previewTheme = { ...DEFAULT_APP_THEME, ...cosmetic.theme }
-
-          return (
-            <View
-              style={[
-                styles.modeCard,
-                {
-                  backgroundColor: previewTheme.surfaceAlt,
-                  borderColor: previewTheme.surfaceAlt,
-                },
-              ]}
-              key={cosmetic.id}
-            >
-              <View style={styles.modeCardHeader}>
-                <ShoppingBag size={20} color={previewTheme.primary} />
-                <Text
-                  style={[
-                    styles.modeCardTitle,
-                    { color: previewTheme.cardText },
-                  ]}
-                >
-                  {cosmetic.name}
-                </Text>
-              </View>
-              {/* <Text
-                style={[
-                  styles.modeCardBody,
-                  { color: previewTheme.cardMutedText },
-                ]}
-              >
-                {cosmetic.description}
-              </Text> */}
-
-              <TouchableOpacity
-                style={[
-                  styles.modeCardButton,
-                  ((isOwned && isEquipped) ||
-                    (!isOwned && cannotAffordCoins)) &&
-                    styles.modeCardButtonDisabled,
-                  {
-                    backgroundColor: previewTheme.primary,
-                    opacity: coins >= cosmetic.price ? 1 : 0.8,
-                  },
-                ]}
-                onPress={() =>
-                  isOwned ? onApplyCosmetic(cosmetic) : onBuyCosmetic(cosmetic)
-                }
-                disabled={
-                  (isOwned && isEquipped) || (!isOwned && cannotAffordCoins)
-                }
-              >
-                <Text style={[styles.modeCardButtonText, { color: "white" }]}>
-                  {isOwned
-                    ? isEquipped
-                      ? "EQUIPPED"
-                      : "USE"
-                    : cosmetic.priceType === "coins"
-                      ? `${cosmetic.price} coins`
-                      : `$${cosmetic.price.toFixed(2)}`}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )
-        })}
-
-        <Text style={[styles.modeCardBody, { color: activeTheme.mutedText }]}>
-          Node &amp; Line Styles
-        </Text>
-        {nodeLineStyleCosmetics.map((cosmetic) => {
-          const cosmeticItemKey = `cosmetic:${cosmetic.id}`
-          const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
-          const isApplied = isOwned && equippedBoardCosmeticId === cosmetic.id
-          const cannotAffordCoins =
-            cosmetic.priceType === "coins" && coins < cosmetic.price
-          const previewStyle = {
-            ...DEFAULT_NODE_LINE_STYLE,
-            ...(cosmetic.nodeLineStyle ?? {}),
-          }
+        {themePacksWithCosmetics.map((themePack) => {
+          const isPackOwned = purchasedStoreItemIds.has(themePack.id)
+          const isExpanded = expandedThemePackId === themePack.id
+          const packPriceLabel =
+            themePackPriceLabels[themePack.id] ?? "Loading..."
 
           return (
             <View
@@ -364,47 +304,251 @@ export function StoreScreen({
                   borderColor: activeTheme.surfaceAlt,
                 },
               ]}
-              key={cosmetic.id}
+              key={themePack.id}
             >
               <View style={styles.modeCardHeader}>
-                <ShoppingBag size={20} color={previewStyle.line} />
+                <ShoppingBag size={20} color={activeTheme.text} />
                 <Text
                   style={[
                     styles.modeCardTitle,
                     { color: activeTheme.cardText },
                   ]}
                 >
-                  {cosmetic.name}
+                  {themePack.name}
                 </Text>
               </View>
+
+              <Text
+                style={[
+                  styles.modeCardBody,
+                  { color: activeTheme.cardMutedText },
+                ]}
+              >
+                {themePack.description}
+              </Text>
 
               <TouchableOpacity
                 style={[
                   styles.modeCardButton,
-                  ((isOwned && isApplied) || (!isOwned && cannotAffordCoins)) &&
-                    styles.modeCardButtonDisabled,
+                  isPackOwned && styles.modeCardButtonDisabled,
+                  { backgroundColor: activeTheme.primary },
+                ]}
+                onPress={() => onBuyThemePack(themePack)}
+                disabled={isPackOwned}
+              >
+                <Text style={[styles.modeCardButtonText, { color: "white" }]}>
+                  {isPackOwned ? "OWNED" : packPriceLabel}
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.modeCardButton,
                   {
-                    backgroundColor: previewStyle.nodeBorder,
-                    opacity: coins >= cosmetic.price ? 1 : 0.8,
+                    backgroundColor: activeTheme.surface,
+                    borderWidth: 1,
+                    borderColor: activeTheme.primary,
+                    marginTop: 8,
                   },
                 ]}
                 onPress={() =>
-                  isOwned ? onApplyCosmetic(cosmetic) : onBuyCosmetic(cosmetic)
-                }
-                disabled={
-                  (isOwned && isApplied) || (!isOwned && cannotAffordCoins)
+                  setExpandedThemePackId((previousPackId) =>
+                    previousPackId === themePack.id ? null : themePack.id,
+                  )
                 }
               >
-                <Text style={[styles.modeCardButtonText, { color: "white" }]}>
-                  {isOwned
-                    ? isApplied
-                      ? "APPLIED"
-                      : "APPLY"
-                    : cosmetic.priceType === "coins"
-                      ? `${cosmetic.price} coins`
-                      : `$${cosmetic.price.toFixed(2)}`}
+                <Text
+                  style={[
+                    styles.modeCardButtonText,
+                    { color: activeTheme.primary },
+                  ]}
+                >
+                  {isExpanded ? "HIDE CONTENTS" : "VIEW CONTENTS"}
                 </Text>
               </TouchableOpacity>
+
+              {isExpanded && (
+                <View style={{ marginTop: 12, gap: 8 }}>
+                  {themePack.cosmetics.map((cosmetic) => {
+                    const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+                    const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
+                    const isEquipped =
+                      (cosmetic.category === "app-theme" &&
+                        equippedThemeCosmeticId === cosmetic.id) ||
+                      (cosmetic.category === "node-line-style" &&
+                        equippedBoardCosmeticId === cosmetic.id)
+                    const canApply = isOwned && !isEquipped
+                    const applyLabel =
+                      cosmetic.category === "app-theme"
+                        ? isEquipped
+                          ? "EQUIPPED"
+                          : "USE"
+                        : isEquipped
+                          ? "APPLIED"
+                          : "APPLY"
+                    const previewTheme = {
+                      ...DEFAULT_APP_THEME,
+                      ...(cosmetic.theme ?? {}),
+                    }
+                    const previewNodeStyle = {
+                      ...DEFAULT_NODE_LINE_STYLE,
+                      ...(cosmetic.nodeLineStyle ?? {}),
+                    }
+
+                    return (
+                      <View
+                        key={cosmetic.id}
+                        style={{
+                          padding: 10,
+                          borderRadius: 10,
+                          backgroundColor: activeTheme.surface,
+                          borderWidth: 1,
+                          borderColor: activeTheme.surfaceAlt,
+                        }}
+                      >
+                        <Text
+                          style={[
+                            styles.modeCardTitle,
+                            { color: activeTheme.cardText },
+                          ]}
+                        >
+                          {cosmetic.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.modeCardBody,
+                            { color: activeTheme.cardMutedText },
+                          ]}
+                        >
+                          {cosmetic.category === "app-theme"
+                            ? "Theme"
+                            : "Node & Line Style"}
+                        </Text>
+
+                        {cosmetic.category === "app-theme" ? (
+                          <View
+                            style={{
+                              marginTop: 6,
+                              padding: 8,
+                              borderRadius: 8,
+                              backgroundColor: previewTheme.background,
+                              borderWidth: 1,
+                              borderColor: previewTheme.surfaceAlt,
+                              gap: 6,
+                            }}
+                          >
+                            <View
+                              style={{
+                                height: 16,
+                                borderRadius: 6,
+                                backgroundColor: previewTheme.surfaceAlt,
+                              }}
+                            />
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 14,
+                                  height: 14,
+                                  borderRadius: 7,
+                                  backgroundColor: previewTheme.primary,
+                                }}
+                              />
+                              <View
+                                style={{
+                                  width: 36,
+                                  height: 4,
+                                  borderRadius: 2,
+                                  backgroundColor: previewTheme.text,
+                                }}
+                              />
+                            </View>
+                          </View>
+                        ) : (
+                          <View
+                            style={{
+                              marginTop: 6,
+                              padding: 8,
+                              borderRadius: 8,
+                              backgroundColor: previewNodeStyle.nodeFill,
+                              borderWidth: 1,
+                              borderColor: previewNodeStyle.nodeBorder,
+                              gap: 6,
+                            }}
+                          >
+                            <View
+                              style={{
+                                height: 3,
+                                borderRadius: 2,
+                                backgroundColor: previewNodeStyle.line,
+                              }}
+                            />
+                            <View
+                              style={{
+                                height: 3,
+                                width: "70%",
+                                borderRadius: 2,
+                                backgroundColor: previewNodeStyle.intersectingLine,
+                              }}
+                            />
+                            <View
+                              style={{
+                                width: 14,
+                                height: 14,
+                                borderRadius: 7,
+                                borderWidth: 2,
+                                borderColor: previewNodeStyle.nodeBorder,
+                                backgroundColor: previewNodeStyle.nodeFill,
+                                justifyContent: "center",
+                                alignItems: "center",
+                              }}
+                            >
+                              <View
+                                style={{
+                                  width: 4,
+                                  height: 4,
+                                  borderRadius: 2,
+                                  backgroundColor: previewNodeStyle.nodeDot,
+                                }}
+                              />
+                            </View>
+                          </View>
+                        )}
+
+                        <TouchableOpacity
+                          style={[
+                            styles.modeCardButton,
+                            {
+                              marginTop: 6,
+                              backgroundColor: isOwned
+                                ? activeTheme.primary
+                                : activeTheme.surfaceAlt,
+                            },
+                            (!canApply || !isOwned) &&
+                              styles.modeCardButtonDisabled,
+                          ]}
+                          onPress={() => onApplyCosmetic(cosmetic)}
+                          disabled={!canApply}
+                        >
+                          <Text
+                            style={[
+                              styles.modeCardButtonText,
+                              { color: isOwned ? "white" : activeTheme.mutedText },
+                            ]}
+                          >
+                            {isOwned ? applyLabel : "LOCKED"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  })}
+                </View>
+              )}
             </View>
           )
         })}
@@ -414,6 +558,7 @@ export function StoreScreen({
         </Text>
         {levelPackItems.map((levelPack) => {
           if (levelPack.defaultOwned) return null
+          const coinPrice = levelPack.price ?? 0
 
           const isOwned =
             levelPack.owned ||
@@ -422,9 +567,11 @@ export function StoreScreen({
               ? purchasedStoreItemIds.has(levelPack.storeItemId)
               : false)
           const cannotAffordCoins =
-            !isOwned &&
-            levelPack.priceType === "coins" &&
-            coins < levelPack.price
+            !isOwned && levelPack.priceType === "coins" && coins < coinPrice
+          const levelPackPriceLabel =
+            levelPack.priceType === "real-money"
+              ? (levelPackPriceLabels[levelPack.id] ?? "Loading...")
+              : `${coinPrice} coins`
 
           return (
             <View
@@ -464,18 +611,18 @@ export function StoreScreen({
                     styles.modeCardButtonDisabled,
                   {
                     backgroundColor: activeTheme.primary,
-                    opacity: coins < levelPack.price || isOwned ? 0.8 : 1,
+                    opacity:
+                      (levelPack.priceType === "coins" && coins < coinPrice) ||
+                      isOwned
+                        ? 0.8
+                        : 1,
                   },
                 ]}
                 onPress={() => onBuyLevelPack(levelPack)}
                 disabled={isOwned || (!isOwned && cannotAffordCoins)}
               >
                 <Text style={[styles.modeCardButtonText, { color: "white" }]}>
-                  {isOwned
-                    ? "OWNED"
-                    : levelPack.priceType === "coins"
-                      ? `${levelPack.price} coins`
-                      : `$${levelPack.price.toFixed(2)}`}
+                  {isOwned ? "OWNED" : levelPackPriceLabel}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -493,13 +640,11 @@ export function StoreScreen({
           <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
             Coins ({coins})
           </Text>
-          {/* <Text
-            style={[styles.modeCardBody, { color: activeTheme.cardMutedText }]}
-          >
-            You have {coins}
-          </Text> */}
         </View>
         {coinPacks.map((coinPack) => {
+          const localizedPrice =
+            coinPackPriceLabels[coinPack.id] ?? "Loading..."
+
           return (
             <View
               style={[
@@ -522,15 +667,6 @@ export function StoreScreen({
                   {coinPack.name} - {coinPack.coins} coins
                 </Text>
               </View>
-              {/* <Text
-                style={[
-                  styles.modeCardBody,
-                  { color: activeTheme.cardMutedText },
-                ]}
-              >
-                {coinPack.description}
-              </Text> */}
-
               <TouchableOpacity
                 style={[
                   styles.modeCardButton,
@@ -541,7 +677,7 @@ export function StoreScreen({
                 onPress={() => onBuyCoinPack(coinPack)}
               >
                 <Text style={[styles.modeCardButtonText, { color: "white" }]}>
-                  ${coinPack.priceDollars.toFixed(2)}
+                  {localizedPrice}
                 </Text>
               </TouchableOpacity>
             </View>

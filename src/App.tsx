@@ -17,6 +17,8 @@ import { SettingsScreen } from "./screens/SettingsScreen"
 import cosmetics, {
   AppThemePalette,
   Cosmetic,
+  ThemePack,
+  THEME_PACKS,
   resolveAppTheme,
   resolveNodeLineStyle,
 } from "./data/cosmetics"
@@ -31,7 +33,7 @@ import {
   normalizeNodePositions,
   resolveNodePositionImmediate,
 } from "./utils/gameLogic"
-import { CoinPack } from "./data/coinPacks"
+import coinPacks, { CoinPack } from "./data/coinPacks"
 import { DEFAULT_SETTINGS, readSettings } from "./utils/settings"
 
 export type ViewType =
@@ -61,6 +63,7 @@ type TimeTrialState = {
 }
 
 const NO_ADS_PRICE = 5.0
+const NO_ADS_REVENUECAT_ID = "remove_ads"
 const NO_ADS_ITEM_ID = "item:no-ads"
 const POPUP_AD_DURATION_SECONDS = 5
 const DAILY_LEVEL_IDS = Array.from({ length: 10 }, (_, index) => index + 1)
@@ -90,6 +93,141 @@ type CompletionMode = "classic" | "daily" | "weekly"
 const DEFAULT_CLASSIC_PACK_ID = "starter-1"
 const MIN_TIME_TRIAL_INTERSECTIONS = 2
 const MAX_TIME_TRIAL_GENERATION_ATTEMPTS = 24
+
+type RevenueCatOfferings = Awaited<ReturnType<typeof Purchases.getOfferings>>
+type RevenueCatPackage =
+  RevenueCatOfferings["all"][string]["availablePackages"][number]
+
+function findRevenueCatPackageByIdentifiers(
+  offerings: RevenueCatOfferings,
+  identifiers: string[],
+): RevenueCatPackage | null {
+  const targetIdentifiers = new Set(identifiers)
+  const allOfferings = Object.values(offerings.all)
+  const allPackages = allOfferings.flatMap(
+    (offering) => offering.availablePackages,
+  )
+
+  const matchingPackage = allPackages.find(
+    (pkg) =>
+      targetIdentifiers.has(pkg.identifier) ||
+      targetIdentifiers.has(pkg.product.identifier),
+  )
+
+  return matchingPackage ?? null
+}
+
+function resolveCoinPackPriceLabels(
+  offerings: RevenueCatOfferings,
+): Record<string, string> {
+  const priceLabelsById: Record<string, string> = {}
+  const allOfferings = Object.values(offerings.all)
+  const allPackages = allOfferings.flatMap(
+    (offering) => offering.availablePackages,
+  )
+
+  for (const coinPack of coinPacks) {
+    const matchingPackage = allPackages.find(
+      (pkg) =>
+        pkg.identifier === coinPack.id ||
+        pkg.product.identifier === coinPack.id ||
+        pkg.product.identifier === coinPack.storeItemId,
+    )
+
+    if (matchingPackage?.product.priceString) {
+      priceLabelsById[coinPack.id] = matchingPackage.product.priceString
+      continue
+    }
+
+    const matchingOffering = offerings.all[coinPack.id]
+    const firstOfferingPackage = matchingOffering?.availablePackages[0]
+    if (firstOfferingPackage?.product.priceString) {
+      priceLabelsById[coinPack.id] = firstOfferingPackage.product.priceString
+    }
+  }
+
+  return priceLabelsById
+}
+
+function resolveLevelPackPriceLabels(
+  levelPacks: LevelPack[],
+  offerings: RevenueCatOfferings,
+): Record<string, string> {
+  const priceLabelsById: Record<string, string> = {}
+  const allOfferings = Object.values(offerings.all)
+  const allPackages = allOfferings.flatMap(
+    (offering) => offering.availablePackages,
+  )
+
+  const paidLevelPacks = levelPacks.filter(
+    (levelPack) => levelPack.priceType === "real-money",
+  )
+
+  for (const levelPack of paidLevelPacks) {
+    const matchingPackage = allPackages.find(
+      (pkg) =>
+        pkg.identifier === levelPack.id ||
+        pkg.product.identifier === levelPack.id ||
+        pkg.product.identifier === levelPack.storeItemId ||
+        pkg.identifier === levelPack.storeItemId,
+    )
+
+    if (matchingPackage?.product.priceString) {
+      priceLabelsById[levelPack.id] = matchingPackage.product.priceString
+      continue
+    }
+
+    const matchingOffering = offerings.all[levelPack.id]
+    const firstOfferingPackage = matchingOffering?.availablePackages[0]
+    if (firstOfferingPackage?.product.priceString) {
+      priceLabelsById[levelPack.id] = firstOfferingPackage.product.priceString
+    }
+  }
+
+  return priceLabelsById
+}
+
+function resolveThemePackPriceLabels(
+  offerings: RevenueCatOfferings,
+): Record<string, string> {
+  const priceLabelsById: Record<string, string> = {}
+
+  for (const themePack of THEME_PACKS) {
+    const localizedPrice = resolveLocalizedPriceLabel(offerings, themePack.id)
+    if (localizedPrice) {
+      priceLabelsById[themePack.id] = localizedPrice
+    }
+  }
+
+  return priceLabelsById
+}
+
+function resolveLocalizedPriceLabel(
+  offerings: RevenueCatOfferings,
+  identifier: string,
+): string | null {
+  const allOfferings = Object.values(offerings.all)
+  const allPackages = allOfferings.flatMap(
+    (offering) => offering.availablePackages,
+  )
+
+  const matchingPackage = allPackages.find(
+    (pkg) =>
+      pkg.identifier === identifier || pkg.product.identifier === identifier,
+  )
+
+  if (matchingPackage?.product.priceString) {
+    return matchingPackage.product.priceString
+  }
+
+  const matchingOffering = offerings.all[identifier]
+  const firstOfferingPackage = matchingOffering?.availablePackages[0]
+  if (firstOfferingPackage?.product.priceString) {
+    return firstOfferingPackage.product.priceString
+  }
+
+  return null
+}
 
 function enrichTimeTrialLinks(nodes: Node[], links: Link[]): Link[] {
   const nextLinks = JSON.parse(JSON.stringify(links)) as Link[]
@@ -456,6 +594,16 @@ export default function App() {
   const [soundEnabled, setSoundEnabled] = useState(
     DEFAULT_SETTINGS.soundEnabled,
   )
+  const [coinPackPriceLabels, setCoinPackPriceLabels] = useState<
+    Record<string, string>
+  >({})
+  const [levelPackPriceLabels, setLevelPackPriceLabels] = useState<
+    Record<string, string>
+  >({})
+  const [themePackPriceLabels, setThemePackPriceLabels] = useState<
+    Record<string, string>
+  >({})
+  const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null)
   const [pendingPopupAdAction, setPendingPopupAdAction] = useState<
     (() => void) | null
   >(null)
@@ -531,6 +679,45 @@ export default function App() {
 
     console.log("Purchases configured")
   }, [])
+
+  useEffect(() => {
+    if (Platform.OS !== "ios" && Platform.OS !== "android") {
+      return
+    }
+
+    let cancelled = false
+
+    const loadCoinPackPriceLabels = async () => {
+      try {
+        const offerings = await Purchases.getOfferings()
+        if (cancelled) {
+          return
+        }
+
+        setCoinPackPriceLabels(resolveCoinPackPriceLabels(offerings))
+        setLevelPackPriceLabels(
+          resolveLevelPackPriceLabels(levelPacks, offerings),
+        )
+        setThemePackPriceLabels(resolveThemePackPriceLabels(offerings))
+        setNoAdsPriceLabel(
+          resolveLocalizedPriceLabel(offerings, NO_ADS_REVENUECAT_ID),
+        )
+      } catch {
+        if (!cancelled) {
+          setCoinPackPriceLabels({})
+          setLevelPackPriceLabels({})
+          setThemePackPriceLabels({})
+          setNoAdsPriceLabel(null)
+        }
+      }
+    }
+
+    void loadCoinPackPriceLabels()
+
+    return () => {
+      cancelled = true
+    }
+  }, [levelPacks])
 
   useEffect(() => {
     let cancelled = false
@@ -694,26 +881,30 @@ export default function App() {
       try {
         await Audio.setAudioModeAsync({
           playsInSilentModeIOS: true,
+          staysActiveInBackground: false,
           shouldDuckAndroid: true,
+          playThroughEarpieceAndroid: false,
         })
 
         const { sound } = await Audio.Sound.createAsync(
           require("./sounds/button_click.mp3"),
           {
             shouldPlay: false,
-            volume: 0.3,
+            volume: 0.55,
           },
         )
 
         if (cancelled) {
-          void sound.unloadAsync()
+          await sound.unloadAsync()
           return
         }
 
-        void menuClickSoundRef.current?.unloadAsync()
+        await menuClickSoundRef.current?.unloadAsync()
         menuClickSoundRef.current = sound
       } catch {
-        // Ignore preload failures; we'll still try playback lazily.
+        if (!cancelled) {
+          menuClickSoundRef.current = null
+        }
       } finally {
         isMenuClickSoundLoadingRef.current = false
       }
@@ -723,56 +914,70 @@ export default function App() {
 
     return () => {
       cancelled = true
-    }
-  }, [soundEnabled])
-
-  useEffect(() => {
-    return () => {
+      isMenuClickSoundLoadingRef.current = false
       void menuClickSoundRef.current?.unloadAsync()
       menuClickSoundRef.current = null
     }
-  }, [])
+  }, [soundEnabled])
 
   const playMenuClickSound = useCallback(() => {
-    if (!soundEnabled) {
+    if (!soundEnabled || isMenuClickSoundLoadingRef.current) {
       return
     }
 
-    if (menuClickSoundRef.current) {
-      void menuClickSoundRef.current.replayAsync()
+    const currentSound = menuClickSoundRef.current
+    if (!currentSound) {
       return
     }
 
-    if (isMenuClickSoundLoadingRef.current) {
-      return
-    }
-
-    isMenuClickSoundLoadingRef.current = true
-    void Audio.Sound.createAsync(require("./sounds/button_click.mp3"), {
-      shouldPlay: false,
-      volume: 0.3,
+    void currentSound.replayAsync().catch(() => {
+      // Ignore playback errors to keep navigation responsive.
     })
-      .then(({ sound }) => {
-        menuClickSoundRef.current = sound
-        return sound.replayAsync()
-      })
-      .catch(() => {
-        // Ignore sound playback failures so menu navigation remains responsive.
-      })
-      .finally(() => {
-        isMenuClickSoundLoadingRef.current = false
-      })
   }, [soundEnabled])
 
   const withMenuClickSound = useCallback(
-    <TArgs extends unknown[]>(action: (...args: TArgs) => void) => {
-      return (...args: TArgs) => {
+    <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
+      (...args: TArgs) => {
         playMenuClickSound()
-        action(...args)
-      }
-    },
+        callback(...args)
+      },
     [playMenuClickSound],
   )
+
+  const handleRestoreAppInfo = useCallback(() => {
+    if (!__DEV__) {
+      return
+    }
+
+    setLevel(1)
+    setCoins(0)
+    setNoAdsOwned(false)
+    setPurchasedStoreItemIds(new Set<string>())
+    setEquippedThemeCosmeticId(null)
+    setEquippedBoardCosmeticId(null)
+    setSelectedLevelPackId(null)
+    setCompletedLevelKeys(new Set<string>())
+    setCompletedLevelsCount(0)
+    setLevelsSinceLastInterstitialAd(0)
+    setLastInterstitialAdAt(Date.now())
+    setSessionLevelIds([])
+    setSessionIndex(0)
+    generatedModeLevelsRef.current.clear()
+    setTimeTrialState({
+      nodeCount: null,
+      durationSeconds: 30,
+      timeLeftSeconds: 0,
+      active: false,
+      solvedCount: 0,
+      earnedCoins: 0,
+    })
+    setPopupAdVisible(false)
+    setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
+    setPendingPopupAdAction(null)
+    clearCompletionHold()
+    setIsLevelComplete(false)
+    setView("home")
+  }, [clearCompletionHold])
 
   const loadLevel = useCallback(
     (levelId: number, mode: PlayMode, forcedTimeTrialNodeCount?: number) => {
@@ -1289,6 +1494,7 @@ export default function App() {
   const handleBuyLevelPack = useCallback(
     (levelPack: LevelPack) => {
       const { storeItemId } = levelPack
+      const coinPrice = levelPack.price ?? 0
 
       if (levelPack.defaultOwned || !storeItemId) {
         return
@@ -1299,11 +1505,11 @@ export default function App() {
       }
 
       if (levelPack.priceType === "coins") {
-        if (coins < levelPack.price) {
+        if (coins < coinPrice) {
           return
         }
 
-        setCoins((previousCoins) => previousCoins - levelPack.price)
+        setCoins((previousCoins) => previousCoins - coinPrice)
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
@@ -1320,6 +1526,50 @@ export default function App() {
       setCoins((previousCoins) => previousCoins + coinPack.coins)
     },
     [coins],
+  )
+
+  const handleBuyThemePack = useCallback(
+    async (themePack: ThemePack) => {
+      if (purchasedStoreItemIds.has(themePack.id)) {
+        return
+      }
+
+      const shouldAllowDevFallback = __DEV__
+      let purchaseSucceeded = false
+
+      if (Platform.OS === "ios" || Platform.OS === "android") {
+        try {
+          const offerings = await Purchases.getOfferings()
+          const matchingPackage = findRevenueCatPackageByIdentifiers(
+            offerings,
+            [themePack.id],
+          )
+
+          if (matchingPackage) {
+            await Purchases.purchasePackage(matchingPackage)
+            purchaseSucceeded = true
+          }
+        } catch {
+          purchaseSucceeded = false
+        }
+      } else if (shouldAllowDevFallback) {
+        purchaseSucceeded = true
+      }
+
+      if (!purchaseSucceeded && !shouldAllowDevFallback) {
+        return
+      }
+
+      setPurchasedStoreItemIds((previousOwnedItems) => {
+        const nextOwnedItems = new Set(previousOwnedItems)
+        nextOwnedItems.add(themePack.id)
+        for (const cosmeticId of themePack.cosmeticIds) {
+          nextOwnedItems.add(`cosmetic:${cosmeticId}`)
+        }
+        return nextOwnedItems
+      })
+    },
+    [purchasedStoreItemIds],
   )
 
   const handleApplyDefaultTheme = useCallback(() => {
@@ -1367,6 +1617,9 @@ export default function App() {
           onStore={withMenuClickSound(() => setView("store"))}
           onAdmin={
             __DEV__ ? withMenuClickSound(() => setView("admin")) : undefined
+          }
+          onRestoreAppInfo={
+            __DEV__ ? withMenuClickSound(handleRestoreAppInfo) : undefined
           }
           onSettings={withMenuClickSound(() => setView("settings"))}
         />
@@ -1444,6 +1697,7 @@ export default function App() {
           coins={coins}
           noAdsOwned={noAdsOwned}
           noAdsPrice={NO_ADS_PRICE}
+          noAdsPriceLabel={noAdsPriceLabel}
           cosmetics={cosmetics}
           levelPacks={levelPacksWithOwnership}
           purchasedStoreItemIds={purchasedStoreItemIds}
@@ -1452,8 +1706,12 @@ export default function App() {
           onBack={withMenuClickSound(() => setView("home"))}
           onBuyNoAds={handleBuyNoAds}
           onBuyCosmetic={handleBuyCosmetic}
+          onBuyThemePack={handleBuyThemePack}
           onBuyLevelPack={handleBuyLevelPack}
           onBuyCoinPack={handleBuyCoinPack}
+          coinPackPriceLabels={coinPackPriceLabels}
+          levelPackPriceLabels={levelPackPriceLabels}
+          themePackPriceLabels={themePackPriceLabels}
           onApplyDefaultTheme={handleApplyDefaultTheme}
           onApplyCosmetic={handleApplyCosmetic}
         />

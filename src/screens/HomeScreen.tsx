@@ -1,5 +1,5 @@
-import React from "react";
-import { Text, TouchableOpacity, View, ScrollView } from "react-native";
+import React from "react"
+import { Text, TouchableOpacity, View, ScrollView } from "react-native"
 import {
   Hammer,
   Bolt,
@@ -7,22 +7,23 @@ import {
   LayoutGrid,
   ShoppingBag,
   SunMoon,
-} from "lucide-react-native";
-import Feather from "@expo/vector-icons/Feather";
-import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
-import { styles } from "../styles";
+} from "lucide-react-native"
+import Feather from "@expo/vector-icons/Feather"
+import FontAwesome5 from "@expo/vector-icons/FontAwesome5"
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
+import { styles } from "../styles"
 
 type HomeScreenProps = {
-  coins: number;
-  onSelectLevels: () => void;
-  onDailyWeekly: () => void;
-  onTimeTrial: () => void;
-  onStore: () => void;
-  onAdmin?: () => void;
-  onSettings: () => void;
-  theme?: AppThemePalette;
-};
+  coins: number
+  onSelectLevels: () => void
+  onDailyWeekly: () => void
+  onTimeTrial: () => void
+  onStore: () => void
+  onAdmin?: () => void
+  onRestoreAppInfo?: () => void
+  onSettings: () => void
+  theme?: AppThemePalette
+}
 
 export function HomeScreen({
   coins,
@@ -31,10 +32,11 @@ export function HomeScreen({
   onTimeTrial,
   onStore,
   onAdmin,
+  onRestoreAppInfo,
   onSettings,
   theme,
 }: HomeScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const activeTheme = theme ?? DEFAULT_APP_THEME
 
   return (
     <View
@@ -149,13 +151,23 @@ export function HomeScreen({
             SETTINGS
           </Text>
         </TouchableOpacity>
-        {/* {onAdmin && (
-          <TouchableOpacity style={styles.homeMenuButton} onPress={onAdmin}>
-            <Hammer size={20} color="#2563eb" />
-            <Text style={styles.homeMenuButtonTitle}>ADMIN (DEV)</Text>
+        {onRestoreAppInfo && (
+          <TouchableOpacity
+            style={[
+              styles.homeMenuButton,
+              { backgroundColor: activeTheme.surfaceAlt },
+            ]}
+            onPress={onRestoreAppInfo}
+          >
+            <Hammer size={20} color={activeTheme.text} />
+            <Text
+              style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
+            >
+              RESTORE APP INFO
+            </Text>
           </TouchableOpacity>
-        )} */}
+        )}
       </View>
     </View>
-  );
+  )
 }
