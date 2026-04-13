@@ -19,7 +19,6 @@ type GameScreenProps = {
   nodes: Node[];
   links: Link[];
   intersectingLinks: Set<string>;
-  moves: number;
   trialTimeLeftSeconds?: number;
   noAdsOwned: boolean;
   theme?: AppThemePalette;
@@ -37,7 +36,6 @@ export function GameScreen({
   nodes,
   links,
   intersectingLinks,
-  moves,
   trialTimeLeftSeconds,
   noAdsOwned,
   theme,
@@ -158,9 +156,6 @@ export function GameScreen({
       </View>
 
       <View style={styles.gameFooter}>
-        <Text style={[styles.movesText, { color: activeTheme.mutedText }]}>
-          Moves: {moves}
-        </Text>
         {typeof trialTimeLeftSeconds === "number" && (
           <Text style={styles.trialTimerText}>
             Time Left: {trialTimeLeftSeconds}s

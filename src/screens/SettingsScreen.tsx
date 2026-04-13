@@ -1,56 +1,56 @@
-import React, { useEffect, useState } from "react"
-import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native"
-import { ArrowLeft, Settings2, Volume2, Eye } from "lucide-react-native"
-import { styles } from "../styles"
+import React, { useEffect, useState } from "react";
+import { ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
+import { ArrowLeft, Settings2, Volume2, Eye } from "lucide-react-native";
+import { styles } from "../styles";
 import {
   DEFAULT_SETTINGS,
   PersistedSettings,
   readSettings,
   writeSettings,
-} from "../utils/settings"
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
+} from "../utils/settings";
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 
 type SettingsScreenProps = {
-  onBack: () => void
-  theme: AppThemePalette | null
-}
+  onBack: () => void;
+  theme: AppThemePalette | null;
+};
 
 export function SettingsScreen({ onBack, theme }: SettingsScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
-  const [settings, setSettings] = useState<PersistedSettings>(DEFAULT_SETTINGS)
-  const [isHydrated, setIsHydrated] = useState(false)
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const [settings, setSettings] = useState<PersistedSettings>(DEFAULT_SETTINGS);
+  const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const hydrateSettings = async () => {
       if (cancelled) {
-        return
+        return;
       }
 
-      const nextSettings = await readSettings()
+      const nextSettings = await readSettings();
       if (cancelled) {
-        return
+        return;
       }
 
-      setSettings(nextSettings)
-      setIsHydrated(true)
-    }
+      setSettings(nextSettings);
+      setIsHydrated(true);
+    };
 
-    void hydrateSettings()
+    void hydrateSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isHydrated) {
-      return
+      return;
     }
 
-    void writeSettings(settings)
-  }, [isHydrated, settings])
+    void writeSettings(settings);
+  }, [isHydrated, settings]);
 
   return (
     <View style={styles.levelsContainer}>
@@ -117,40 +117,8 @@ export function SettingsScreen({ onBack, theme }: SettingsScreenProps) {
           </View>
 
           <View style={styles.settingsDivider} />
-
-          <View style={styles.settingsItem}>
-            <View style={styles.settingsItemTextContainer}>
-              <View style={styles.modeCardHeader}>
-                <Eye size={16} color={activeTheme.cardText} />
-                <Text
-                  style={[
-                    styles.settingsItemTitle,
-                    { color: activeTheme.cardText },
-                  ]}
-                >
-                  High Contrast Mode
-                </Text>
-              </View>
-              <Text
-                style={[
-                  styles.settingsItemDescription,
-                  { color: activeTheme.cardText },
-                ]}
-              >
-                Increase visual contrast for easier node tracking.
-              </Text>
-            </View>
-            <Switch
-              value={settings.highContrastMode}
-              onValueChange={(value) =>
-                setSettings((prev) => ({ ...prev, highContrastMode: value }))
-              }
-              trackColor={{ false: "#cbd5e1", true: "#60a5fa" }}
-              thumbColor={settings.highContrastMode ? "#2563eb" : "#94a3b8"}
-            />
-          </View>
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }

@@ -4,14 +4,10 @@ export const SETTINGS_STORAGE_KEY = "node-master.settings";
 
 export type PersistedSettings = {
   soundEnabled: boolean;
-  hapticsEnabled: boolean;
-  highContrastMode: boolean;
 };
 
 export const DEFAULT_SETTINGS: PersistedSettings = {
   soundEnabled: true,
-  hapticsEnabled: true,
-  highContrastMode: false,
 };
 
 export function parseSettings(rawValue: string | null): PersistedSettings {
@@ -27,14 +23,6 @@ export function parseSettings(rawValue: string | null): PersistedSettings {
         typeof parsed.soundEnabled === "boolean"
           ? parsed.soundEnabled
           : DEFAULT_SETTINGS.soundEnabled,
-      hapticsEnabled:
-        typeof parsed.hapticsEnabled === "boolean"
-          ? parsed.hapticsEnabled
-          : DEFAULT_SETTINGS.hapticsEnabled,
-      highContrastMode:
-        typeof parsed.highContrastMode === "boolean"
-          ? parsed.highContrastMode
-          : DEFAULT_SETTINGS.highContrastMode,
     };
   } catch {
     return DEFAULT_SETTINGS;

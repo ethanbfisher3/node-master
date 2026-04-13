@@ -1,40 +1,77 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Modal, StatusBar, View, Text, Platform } from "react-native"
-import { GestureHandlerRootView } from "react-native-gesture-handler"
-import { Audio } from "expo-av"
-import Purchases, { LOG_LEVEL } from "react-native-purchases"
-import { LevelData, PRE_GENERATED_LEVELS } from "./data/levels"
-import { CompleteScreen } from "./screens/CompleteScreen"
-import { GameScreen } from "./screens/GameScreen"
-import { HomeScreen } from "./screens/HomeScreen"
-import { LevelPackScreen } from "./screens/LevelPackScreen"
-import { LevelsScreen } from "./screens/LevelsScreen"
-import { AdminScreen } from "./screens/AdminScreen"
-import { StoreScreen } from "./screens/StoreScreen"
-import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen"
-import { TimeTrialScreen } from "./screens/TimeTrialScreen"
-import { SettingsScreen } from "./screens/SettingsScreen"
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Modal, StatusBar, View, Text, Platform, Alert } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Audio } from "expo-av";
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import { PRE_GENERATED_LEVELS } from "./data/levels";
+import { CompleteScreen } from "./screens/CompleteScreen";
+import { GameScreen } from "./screens/GameScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { LevelPackScreen } from "./screens/LevelPackScreen";
+import { LevelsScreen } from "./screens/LevelsScreen";
+import { AdminScreen } from "./screens/AdminScreen";
+import { StoreScreen } from "./screens/StoreScreen";
+import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen";
+import { TimeTrialScreen } from "./screens/TimeTrialScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
+import * as NavigationBar from "expo-navigation-bar";
 import cosmetics, {
   AppThemePalette,
   Cosmetic,
   ThemePack,
-  THEME_PACKS,
   resolveAppTheme,
   resolveNodeLineStyle,
-} from "./data/cosmetics"
-import { createLevelPacks, LevelPack } from "./data/levelPacks"
-import { GAME_HEIGHT, GAME_WIDTH, styles } from "./styles"
-import { doIntersect } from "./utils/geometry"
-import { storageGetItem, storageSetItem } from "./utils/appStorage"
+} from "./data/cosmetics";
+import { createLevelPacks, LevelPack } from "./data/levelPacks";
+import { GAME_HEIGHT, GAME_WIDTH, styles } from "./styles";
 import {
   generateLevel,
   Link,
   Node,
   normalizeNodePositions,
   resolveNodePositionImmediate,
-} from "./utils/gameLogic"
-import coinPacks, { CoinPack } from "./data/coinPacks"
-import { DEFAULT_SETTINGS, readSettings } from "./utils/settings"
+} from "./utils/gameLogic";
+import { CoinPack } from "./data/coinPacks";
+import { DEFAULT_SETTINGS, readSettings } from "./utils/settings";
+import {
+  DAILY_LEVEL_IDS,
+  DEFAULT_CLASSIC_PACK_ID,
+  MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS,
+  MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS,
+  NO_ADS_ITEM_ID,
+  NO_ADS_PRICE,
+  NO_ADS_REVENUECAT_ID,
+  PLAYER_PROGRESS_STORAGE_KEY,
+  COMPLETED_LEVELS_STORAGE_KEY,
+  POPUP_AD_DURATION_SECONDS,
+  SOLVED_HOLD_DURATION_MS,
+  WEEKLY_LEVEL_IDS,
+} from "./app/constants";
+import {
+  findRevenueCatPackageByIdentifiers,
+  resolveCoinPackPriceLabels,
+  resolveLevelPackPriceLabels,
+  resolveLocalizedPriceLabel,
+  resolveThemePackPriceLabels,
+} from "./app/revenueCat";
+import {
+  classicPackCompletionKey,
+  completionKey,
+  getCompletedLevelIdsForClassicPack,
+  getCompletedLevelIdsForMode,
+  readPlayerProgress,
+  writePlayerProgress,
+  type CompletionMode,
+  type PersistedPlayerProgress,
+} from "./app/progress";
+import { getIntersectingLinkIds } from "./app/levelIntersections";
+import { generateLevelForMode } from "./app/levelGeneration";
 
 export type ViewType =
   | "home"
@@ -47,566 +84,78 @@ export type ViewType =
   | "game"
   | "complete"
   | "time-trial-result"
-  | "settings"
+  | "settings";
 
-type PlayMode = "classic" | "daily" | "weekly" | "time-trial"
+type PlayMode = "classic" | "daily" | "weekly" | "time-trial";
 
-type TrialDuration = 30 | 60 | 120
+type TrialDuration = 30 | 60 | 120;
 
 type TimeTrialState = {
-  nodeCount: number | null
-  durationSeconds: TrialDuration
-  timeLeftSeconds: number
-  active: boolean
-  solvedCount: number
-  earnedCoins: number
-}
-
-const NO_ADS_PRICE = 5.0
-const NO_ADS_REVENUECAT_ID = "remove_ads"
-const NO_ADS_ITEM_ID = "item:no-ads"
-const POPUP_AD_DURATION_SECONDS = 5
-const DAILY_LEVEL_IDS = Array.from({ length: 10 }, (_, index) => index + 1)
-const WEEKLY_LEVEL_IDS = Array.from({ length: 50 }, (_, index) => index + 1)
-const PLAYER_PROGRESS_STORAGE_KEY = "node-master.player-progress"
-const COINS_STORAGE_KEY = "node-master.coins"
-const COMPLETED_LEVELS_STORAGE_KEY = "node-master.completed-levels"
-const SOLVED_HOLD_DURATION_MS = 700
-const MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS = 3
-const MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS = 3 * 60 * 1000
-
-type PersistedPlayerProgress = {
-  level: number
-  coins: number
-  noAdsOwned: boolean
-  purchasedStoreItemIds: string[]
-  equippedThemeCosmeticId: string | null
-  equippedBoardCosmeticId: string | null
-  completedLevelKeys: string[]
-  completedLevelsCount: number
-  levelsSinceLastInterstitialAd: number
-  lastInterstitialAdAt: number | null
-}
-
-type CompletionMode = "classic" | "daily" | "weekly"
-
-const DEFAULT_CLASSIC_PACK_ID = "starter-1"
-const MIN_TIME_TRIAL_INTERSECTIONS = 2
-const MAX_TIME_TRIAL_GENERATION_ATTEMPTS = 24
-
-type RevenueCatOfferings = Awaited<ReturnType<typeof Purchases.getOfferings>>
-type RevenueCatPackage =
-  RevenueCatOfferings["all"][string]["availablePackages"][number]
-
-function findRevenueCatPackageByIdentifiers(
-  offerings: RevenueCatOfferings,
-  identifiers: string[],
-): RevenueCatPackage | null {
-  const targetIdentifiers = new Set(identifiers)
-  const allOfferings = Object.values(offerings.all)
-  const allPackages = allOfferings.flatMap(
-    (offering) => offering.availablePackages,
-  )
-
-  const matchingPackage = allPackages.find(
-    (pkg) =>
-      targetIdentifiers.has(pkg.identifier) ||
-      targetIdentifiers.has(pkg.product.identifier),
-  )
-
-  return matchingPackage ?? null
-}
-
-function resolveCoinPackPriceLabels(
-  offerings: RevenueCatOfferings,
-): Record<string, string> {
-  const priceLabelsById: Record<string, string> = {}
-  const allOfferings = Object.values(offerings.all)
-  const allPackages = allOfferings.flatMap(
-    (offering) => offering.availablePackages,
-  )
-
-  for (const coinPack of coinPacks) {
-    const matchingPackage = allPackages.find(
-      (pkg) =>
-        pkg.identifier === coinPack.id ||
-        pkg.product.identifier === coinPack.id ||
-        pkg.product.identifier === coinPack.storeItemId,
-    )
-
-    if (matchingPackage?.product.priceString) {
-      priceLabelsById[coinPack.id] = matchingPackage.product.priceString
-      continue
-    }
-
-    const matchingOffering = offerings.all[coinPack.id]
-    const firstOfferingPackage = matchingOffering?.availablePackages[0]
-    if (firstOfferingPackage?.product.priceString) {
-      priceLabelsById[coinPack.id] = firstOfferingPackage.product.priceString
-    }
-  }
-
-  return priceLabelsById
-}
-
-function resolveLevelPackPriceLabels(
-  levelPacks: LevelPack[],
-  offerings: RevenueCatOfferings,
-): Record<string, string> {
-  const priceLabelsById: Record<string, string> = {}
-  const allOfferings = Object.values(offerings.all)
-  const allPackages = allOfferings.flatMap(
-    (offering) => offering.availablePackages,
-  )
-
-  const paidLevelPacks = levelPacks.filter(
-    (levelPack) => levelPack.priceType === "real-money",
-  )
-
-  for (const levelPack of paidLevelPacks) {
-    const matchingPackage = allPackages.find(
-      (pkg) =>
-        pkg.identifier === levelPack.id ||
-        pkg.product.identifier === levelPack.id ||
-        pkg.product.identifier === levelPack.storeItemId ||
-        pkg.identifier === levelPack.storeItemId,
-    )
-
-    if (matchingPackage?.product.priceString) {
-      priceLabelsById[levelPack.id] = matchingPackage.product.priceString
-      continue
-    }
-
-    const matchingOffering = offerings.all[levelPack.id]
-    const firstOfferingPackage = matchingOffering?.availablePackages[0]
-    if (firstOfferingPackage?.product.priceString) {
-      priceLabelsById[levelPack.id] = firstOfferingPackage.product.priceString
-    }
-  }
-
-  return priceLabelsById
-}
-
-function resolveThemePackPriceLabels(
-  offerings: RevenueCatOfferings,
-): Record<string, string> {
-  const priceLabelsById: Record<string, string> = {}
-
-  for (const themePack of THEME_PACKS) {
-    const localizedPrice = resolveLocalizedPriceLabel(offerings, themePack.id)
-    if (localizedPrice) {
-      priceLabelsById[themePack.id] = localizedPrice
-    }
-  }
-
-  return priceLabelsById
-}
-
-function resolveLocalizedPriceLabel(
-  offerings: RevenueCatOfferings,
-  identifier: string,
-): string | null {
-  const allOfferings = Object.values(offerings.all)
-  const allPackages = allOfferings.flatMap(
-    (offering) => offering.availablePackages,
-  )
-
-  const matchingPackage = allPackages.find(
-    (pkg) =>
-      pkg.identifier === identifier || pkg.product.identifier === identifier,
-  )
-
-  if (matchingPackage?.product.priceString) {
-    return matchingPackage.product.priceString
-  }
-
-  const matchingOffering = offerings.all[identifier]
-  const firstOfferingPackage = matchingOffering?.availablePackages[0]
-  if (firstOfferingPackage?.product.priceString) {
-    return firstOfferingPackage.product.priceString
-  }
-
-  return null
-}
-
-function enrichTimeTrialLinks(nodes: Node[], links: Link[]): Link[] {
-  const nextLinks = JSON.parse(JSON.stringify(links)) as Link[]
-  const targetLinkCount = Math.min(
-    nodes.length + Math.max(2, Math.floor(nodes.length / 2)),
-    20,
-  )
-
-  let attempts = 0
-  while (nextLinks.length < targetLinkCount && attempts < 240) {
-    attempts++
-    const firstNode = nodes[Math.floor(Math.random() * nodes.length)]
-    const secondNode = nodes[Math.floor(Math.random() * nodes.length)]
-
-    if (!firstNode || !secondNode || firstNode.id === secondNode.id) {
-      continue
-    }
-
-    const exists = nextLinks.some(
-      (entry) =>
-        (entry.node1Id === firstNode.id && entry.node2Id === secondNode.id) ||
-        (entry.node1Id === secondNode.id && entry.node2Id === firstNode.id),
-    )
-
-    if (exists) {
-      continue
-    }
-
-    nextLinks.push({
-      id: `tt-link-${nextLinks.length}-${attempts}`,
-      node1Id: firstNode.id,
-      node2Id: secondNode.id,
-      color: "#94a3b8",
-    })
-  }
-
-  return nextLinks
-}
-
-function getIntersectingLinkIds(
-  currentNodes: Node[],
-  currentLinks: Link[],
-): Set<string> {
-  const intersections = new Set<string>()
-
-  for (let i = 0; i < currentLinks.length; i++) {
-    for (let j = i + 1; j < currentLinks.length; j++) {
-      const firstLink = currentLinks[i]
-      const secondLink = currentLinks[j]
-
-      if (
-        firstLink.node1Id === secondLink.node1Id ||
-        firstLink.node1Id === secondLink.node2Id ||
-        firstLink.node2Id === secondLink.node1Id ||
-        firstLink.node2Id === secondLink.node2Id
-      ) {
-        continue
-      }
-
-      const firstNodeA = currentNodes.find(
-        (node) => node.id === firstLink.node1Id,
-      )
-      const firstNodeB = currentNodes.find(
-        (node) => node.id === firstLink.node2Id,
-      )
-      const secondNodeA = currentNodes.find(
-        (node) => node.id === secondLink.node1Id,
-      )
-      const secondNodeB = currentNodes.find(
-        (node) => node.id === secondLink.node2Id,
-      )
-
-      if (!firstNodeA || !firstNodeB || !secondNodeA || !secondNodeB) {
-        continue
-      }
-
-      if (doIntersect(firstNodeA, firstNodeB, secondNodeA, secondNodeB)) {
-        intersections.add(firstLink.id)
-        intersections.add(secondLink.id)
-      }
-    }
-  }
-
-  return intersections
-}
-
-function toNonNegativeInt(value: unknown, fallback: number): number {
-  const parsed =
-    typeof value === "number"
-      ? value
-      : typeof value === "string"
-        ? Number(value)
-        : Number.NaN
-
-  if (!Number.isFinite(parsed) || parsed < 0) {
-    return fallback
-  }
-
-  return Math.floor(parsed)
-}
-
-async function readLegacyCompletedLevels(): Promise<Set<number>> {
-  try {
-    const rawValue = await storageGetItem(COMPLETED_LEVELS_STORAGE_KEY)
-    if (!rawValue) {
-      return new Set()
-    }
-
-    const parsedValue = JSON.parse(rawValue) as unknown
-    if (!Array.isArray(parsedValue)) {
-      return new Set()
-    }
-
-    return new Set(
-      parsedValue.filter((value): value is number => typeof value === "number"),
-    )
-  } catch {
-    return new Set()
-  }
-}
-
-function completionKey(mode: CompletionMode, levelId: number): string {
-  return `${mode}:${levelId}`
-}
-
-function classicPackCompletionKey(packId: string, levelId: number): string {
-  return `classic:${packId}:${levelId}`
-}
-
-function getCompletedLevelIdsForMode(
-  completedLevelKeys: Set<string>,
-  mode: CompletionMode,
-): Set<number> {
-  const result = new Set<number>()
-
-  for (const key of completedLevelKeys) {
-    const [entryMode, levelText] = key.split(":")
-    if (entryMode !== mode) {
-      continue
-    }
-
-    const levelNumber = Number(levelText)
-    if (Number.isFinite(levelNumber)) {
-      result.add(levelNumber)
-    }
-  }
-
-  return result
-}
-
-function getCompletedLevelIdsForClassicPack(
-  completedLevelKeys: Set<string>,
-  packId: string,
-): Set<number> {
-  const result = new Set<number>()
-  const classicPrefix = `classic:${packId}:`
-
-  for (const key of completedLevelKeys) {
-    if (!key.startsWith(classicPrefix)) {
-      continue
-    }
-
-    const levelNumber = Number(key.slice(classicPrefix.length))
-    if (Number.isFinite(levelNumber)) {
-      result.add(levelNumber)
-    }
-  }
-
-  return result
-}
-
-function migrateClassicCompletionKeys(keys: string[]): string[] {
-  return keys.map((key) => {
-    const parts = key.split(":")
-
-    if (parts.length === 2 && parts[0] === "classic") {
-      const levelNumber = Number(parts[1])
-      if (Number.isFinite(levelNumber)) {
-        return classicPackCompletionKey(DEFAULT_CLASSIC_PACK_ID, levelNumber)
-      }
-    }
-
-    return key
-  })
-}
-
-function defaultPlayerProgress(): PersistedPlayerProgress {
-  return {
-    level: 1,
-    coins: 0,
-    noAdsOwned: false,
-    purchasedStoreItemIds: [],
-    equippedThemeCosmeticId: null,
-    equippedBoardCosmeticId: null,
-    completedLevelKeys: [],
-    completedLevelsCount: 0,
-    levelsSinceLastInterstitialAd: 0,
-    lastInterstitialAdAt: null,
-  }
-}
-
-async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
-  try {
-    const rawValue = await storageGetItem(PLAYER_PROGRESS_STORAGE_KEY)
-    const legacyCoinsRawValue = await storageGetItem(COINS_STORAGE_KEY)
-    const legacyCoins = toNonNegativeInt(legacyCoinsRawValue, 0)
-
-    if (!rawValue) {
-      const legacyCompletedLevelKeys = Array.from(
-        await readLegacyCompletedLevels(),
-      ).map((levelId) => completionKey("classic", levelId))
-      return {
-        ...defaultPlayerProgress(),
-        coins: legacyCoins,
-        completedLevelKeys: legacyCompletedLevelKeys,
-        completedLevelsCount: legacyCompletedLevelKeys.length,
-      }
-    }
-
-    const parsedValue = JSON.parse(rawValue) as Partial<PersistedPlayerProgress>
-    const purchasedStoreItemIds = Array.isArray(
-      parsedValue.purchasedStoreItemIds,
-    )
-      ? parsedValue.purchasedStoreItemIds.filter(
-          (value): value is string => typeof value === "string",
-        )
-      : []
-
-    const noAdsOwned = Boolean(parsedValue.noAdsOwned)
-    if (noAdsOwned && !purchasedStoreItemIds.includes(NO_ADS_ITEM_ID)) {
-      purchasedStoreItemIds.push(NO_ADS_ITEM_ID)
-    }
-
-    const completedLevelKeys = Array.isArray(parsedValue.completedLevelKeys)
-      ? parsedValue.completedLevelKeys.filter(
-          (value): value is string => typeof value === "string",
-        )
-      : Array.isArray(
-            (parsedValue as { completedLevelIds?: unknown }).completedLevelIds,
-          )
-        ? (parsedValue as { completedLevelIds: unknown[] }).completedLevelIds
-            .filter((value): value is number => typeof value === "number")
-            .map((value) => completionKey("classic", value))
-        : []
-
-    const migratedCompletedLevelKeys =
-      migrateClassicCompletionKeys(completedLevelKeys)
-
-    return {
-      level: toNonNegativeInt(parsedValue.level, 1) || 1,
-      coins: toNonNegativeInt(parsedValue.coins, legacyCoins),
-      noAdsOwned,
-      purchasedStoreItemIds,
-      equippedThemeCosmeticId:
-        typeof parsedValue.equippedThemeCosmeticId === "string"
-          ? parsedValue.equippedThemeCosmeticId
-          : typeof (parsedValue as { equippedCosmeticId?: unknown })
-                .equippedCosmeticId === "string"
-            ? ((parsedValue as { equippedCosmeticId: string })
-                .equippedCosmeticId ?? null)
-            : null,
-      equippedBoardCosmeticId:
-        typeof parsedValue.equippedBoardCosmeticId === "string"
-          ? parsedValue.equippedBoardCosmeticId
-          : null,
-      completedLevelKeys: migratedCompletedLevelKeys,
-      completedLevelsCount: toNonNegativeInt(
-        parsedValue.completedLevelsCount,
-        migratedCompletedLevelKeys.length,
-      ),
-      levelsSinceLastInterstitialAd: toNonNegativeInt(
-        parsedValue.levelsSinceLastInterstitialAd,
-        0,
-      ),
-      lastInterstitialAdAt:
-        typeof parsedValue.lastInterstitialAdAt === "number"
-          ? parsedValue.lastInterstitialAdAt
-          : null,
-    }
-  } catch {
-    const fallbackCoins = toNonNegativeInt(
-      await storageGetItem(COINS_STORAGE_KEY),
-      0,
-    )
-    return {
-      ...defaultPlayerProgress(),
-      coins: fallbackCoins,
-    }
-  }
-}
-
-async function writePlayerProgress(
-  progress: PersistedPlayerProgress,
-): Promise<void> {
-  try {
-    const normalizedCoins = toNonNegativeInt(progress.coins, 0)
-    const legacyEquippedCosmeticId = progress.equippedThemeCosmeticId
-    await storageSetItem(
-      PLAYER_PROGRESS_STORAGE_KEY,
-      JSON.stringify({
-        ...progress,
-        coins: normalizedCoins,
-        equippedCosmeticId: legacyEquippedCosmeticId,
-      }),
-    )
-    await storageSetItem(COINS_STORAGE_KEY, String(normalizedCoins))
-
-    // Keep the legacy key updated for backwards compatibility with old builds.
-    const classicCompletedLevelIds = progress.completedLevelKeys
-      .filter((key) => key.startsWith("classic:"))
-      .map((key) => Number(key.split(":")[1]))
-      .filter((value) => Number.isFinite(value))
-
-    await storageSetItem(
-      COMPLETED_LEVELS_STORAGE_KEY,
-      JSON.stringify(classicCompletedLevelIds),
-    )
-  } catch {
-    // Ignore storage failures; the game should remain playable.
-  }
-}
+  nodeCount: number | null;
+  durationSeconds: TrialDuration;
+  timeLeftSeconds: number;
+  active: boolean;
+  solvedCount: number;
+  earnedCoins: number;
+};
 
 export default function App() {
-  const [view, setView] = useState<ViewType>("home")
-  const [playMode, setPlayMode] = useState<PlayMode>("classic")
-  const [level, setLevel] = useState(1)
-  const [coins, setCoins] = useState(1000)
-  const [noAdsOwned, setNoAdsOwned] = useState(false)
+  const [view, setView] = useState<ViewType>("home");
+  const [playMode, setPlayMode] = useState<PlayMode>("classic");
+  const [level, setLevel] = useState(1);
+  const [coins, setCoins] = useState(1000);
+  const [noAdsOwned, setNoAdsOwned] = useState(false);
   const [purchasedStoreItemIds, setPurchasedStoreItemIds] = useState<
     Set<string>
-  >(new Set())
+  >(new Set());
   const [equippedThemeCosmeticId, setEquippedThemeCosmeticId] = useState<
     string | null
-  >(null)
+  >(null);
   const [equippedBoardCosmeticId, setEquippedBoardCosmeticId] = useState<
     string | null
-  >(null)
+  >(null);
   const [selectedLevelPackId, setSelectedLevelPackId] = useState<string | null>(
     null,
-  )
+  );
   const [completedLevelKeys, setCompletedLevelKeys] = useState<Set<string>>(
     new Set(),
-  )
-  const [nodes, setNodes] = useState<Node[]>([])
-  const [links, setLinks] = useState<Link[]>([])
+  );
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [links, setLinks] = useState<Link[]>([]);
   const [intersectingLinks, setIntersectingLinks] = useState<Set<string>>(
     new Set(),
-  )
-  const [moves, setMoves] = useState(0)
-  const [isLevelComplete, setIsLevelComplete] = useState(false)
-  const [completedLevelsCount, setCompletedLevelsCount] = useState(0)
+  );
+  const [isLevelComplete, setIsLevelComplete] = useState(false);
+  const [completedLevelsCount, setCompletedLevelsCount] = useState(0);
   const [levelsSinceLastInterstitialAd, setLevelsSinceLastInterstitialAd] =
-    useState(0)
+    useState(0);
   const [lastInterstitialAdAt, setLastInterstitialAdAt] = useState<
     number | null
-  >(null)
-  const [isProgressHydrated, setIsProgressHydrated] = useState(false)
-  const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([])
-  const [sessionIndex, setSessionIndex] = useState(0)
-  const [popupAdVisible, setPopupAdVisible] = useState(false)
+  >(null);
+  const [isProgressHydrated, setIsProgressHydrated] = useState(false);
+  const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([]);
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [popupAdVisible, setPopupAdVisible] = useState(false);
   const [popupAdSecondsLeft, setPopupAdSecondsLeft] = useState(
     POPUP_AD_DURATION_SECONDS,
-  )
+  );
   const [soundEnabled, setSoundEnabled] = useState(
     DEFAULT_SETTINGS.soundEnabled,
-  )
+  );
   const [coinPackPriceLabels, setCoinPackPriceLabels] = useState<
     Record<string, string>
-  >({})
+  >({});
   const [levelPackPriceLabels, setLevelPackPriceLabels] = useState<
     Record<string, string>
-  >({})
+  >({});
   const [themePackPriceLabels, setThemePackPriceLabels] = useState<
     Record<string, string>
-  >({})
-  const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null)
+  >({});
+  const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null);
+  const [purchaseCelebrationToken, setPurchaseCelebrationToken] = useState(0);
   const [pendingPopupAdAction, setPendingPopupAdAction] = useState<
     (() => void) | null
-  >(null)
+  >(null);
   const [timeTrialState, setTimeTrialState] = useState<TimeTrialState>({
     nodeCount: null,
     durationSeconds: 30,
@@ -614,28 +163,20 @@ export default function App() {
     active: false,
     solvedCount: 0,
     earnedCoins: 0,
-  })
+  });
   const completionHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
-  )
-  const menuClickSoundRef = useRef<Audio.Sound | null>(null)
-  const isMenuClickSoundLoadingRef = useRef(false)
+  );
+  const menuClickSoundRef = useRef<Audio.Sound | null>(null);
+  const isMenuClickSoundLoadingRef = useRef(false);
   const generatedModeLevelsRef = useRef<
     Map<string, { nodes: Node[]; links: Link[] }>
-  >(new Map())
-
-  const levelById = useMemo(() => {
-    const map = new Map<number, LevelData>()
-    for (const entry of PRE_GENERATED_LEVELS) {
-      map.set(entry.id, entry)
-    }
-    return map
-  }, [])
+  >(new Map());
 
   const levelPacks = useMemo<LevelPack[]>(
     () => createLevelPacks(PRE_GENERATED_LEVELS.length),
     [],
-  )
+  );
 
   const levelPacksWithOwnership = useMemo(
     () =>
@@ -648,151 +189,166 @@ export default function App() {
             : false),
       })),
     [levelPacks, purchasedStoreItemIds],
-  )
+  );
 
   const selectedLevelPack = useMemo(() => {
     if (!levelPacksWithOwnership.length) {
-      return null
+      return null;
     }
 
     const explicit = levelPacksWithOwnership.find(
       (pack) => pack.id === selectedLevelPackId,
-    )
+    );
     if (explicit) {
-      return explicit
+      return explicit;
     }
 
-    return levelPacksWithOwnership.find((pack) => pack.owned) ?? null
-  }, [levelPacksWithOwnership, selectedLevelPackId])
+    return levelPacksWithOwnership.find((pack) => pack.owned) ?? null;
+  }, [levelPacksWithOwnership, selectedLevelPackId]);
+
+  const requiredNodeCountByLevelId = useMemo(() => {
+    const byLevelId = new Map<number, number>();
+    for (const levelEntry of PRE_GENERATED_LEVELS) {
+      byLevelId.set(levelEntry.id, levelEntry.nodes.length);
+    }
+    return byLevelId;
+  }, []);
 
   useEffect(() => {
-    Purchases.setLogLevel(LOG_LEVEL.VERBOSE)
+    const hideNavBar = async () => {
+      NavigationBar.setVisibilityAsync("visible");
+    };
+    hideNavBar();
+  }, []);
+
+  useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
     if (Platform.OS === "ios") {
       Purchases.configure({
         apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS,
-      })
+      });
     } else if (Platform.OS === "android") {
       Purchases.configure({
         apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID,
-      })
+      });
     }
 
-    console.log("Purchases configured")
-  }, [])
+    console.log("Purchases configured");
+  }, []);
 
   useEffect(() => {
     if (Platform.OS !== "ios" && Platform.OS !== "android") {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const loadCoinPackPriceLabels = async () => {
       try {
-        const offerings = await Purchases.getOfferings()
+        const offerings = await Purchases.getOfferings();
         if (cancelled) {
-          return
+          return;
         }
 
-        setCoinPackPriceLabels(resolveCoinPackPriceLabels(offerings))
+        setCoinPackPriceLabels(resolveCoinPackPriceLabels(offerings));
         setLevelPackPriceLabels(
           resolveLevelPackPriceLabels(levelPacks, offerings),
-        )
-        setThemePackPriceLabels(resolveThemePackPriceLabels(offerings))
+        );
+        setThemePackPriceLabels(resolveThemePackPriceLabels(offerings));
         setNoAdsPriceLabel(
           resolveLocalizedPriceLabel(offerings, NO_ADS_REVENUECAT_ID),
-        )
+        );
       } catch {
         if (!cancelled) {
-          setCoinPackPriceLabels({})
-          setLevelPackPriceLabels({})
-          setThemePackPriceLabels({})
-          setNoAdsPriceLabel(null)
+          setCoinPackPriceLabels({});
+          setLevelPackPriceLabels({});
+          setThemePackPriceLabels({});
+          setNoAdsPriceLabel(null);
         }
       }
-    }
+    };
 
-    void loadCoinPackPriceLabels()
+    void loadCoinPackPriceLabels();
 
     return () => {
-      cancelled = true
-    }
-  }, [levelPacks])
+      cancelled = true;
+    };
+  }, [levelPacks]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const hydrateProgress = async () => {
-      const progress = await readPlayerProgress()
+      const progress = await readPlayerProgress();
       if (cancelled) {
-        return
+        return;
       }
 
-      setLevel(progress.level)
-      setCoins(progress.coins)
-      setNoAdsOwned(progress.noAdsOwned)
-      setPurchasedStoreItemIds(new Set(progress.purchasedStoreItemIds))
-      setEquippedThemeCosmeticId(progress.equippedThemeCosmeticId)
-      setEquippedBoardCosmeticId(progress.equippedBoardCosmeticId)
-      setCompletedLevelKeys(new Set(progress.completedLevelKeys))
-      setCompletedLevelsCount(progress.completedLevelsCount)
-      setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd)
-      setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now())
-      setIsProgressHydrated(true)
-    }
+      setLevel(progress.level);
+      setCoins(progress.coins);
+      setNoAdsOwned(progress.noAdsOwned);
+      setPurchasedStoreItemIds(new Set(progress.purchasedStoreItemIds));
+      setEquippedThemeCosmeticId(progress.equippedThemeCosmeticId);
+      setEquippedBoardCosmeticId(progress.equippedBoardCosmeticId);
+      setCompletedLevelKeys(new Set(progress.completedLevelKeys));
+      setCompletedLevelsCount(progress.completedLevelsCount);
+      setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd);
+      setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now());
+      setIsProgressHydrated(true);
+    };
 
-    void hydrateProgress()
+    void hydrateProgress();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const hydrateSettings = async () => {
-      const nextSettings = await readSettings()
+      const nextSettings = await readSettings();
       if (cancelled) {
-        return
+        return;
       }
 
-      setSoundEnabled(nextSettings.soundEnabled)
-    }
+      setSoundEnabled(nextSettings.soundEnabled);
+    };
 
-    void hydrateSettings()
+    void hydrateSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (view === "settings") {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const syncSettings = async () => {
-      const nextSettings = await readSettings()
+      const nextSettings = await readSettings();
       if (cancelled) {
-        return
+        return;
       }
 
-      setSoundEnabled(nextSettings.soundEnabled)
-    }
+      setSoundEnabled(nextSettings.soundEnabled);
+    };
 
-    void syncSettings()
+    void syncSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [view])
+      cancelled = true;
+    };
+  }, [view]);
 
   useEffect(() => {
     if (!isProgressHydrated) {
-      return
+      return;
     }
 
     void writePlayerProgress({
@@ -806,7 +362,7 @@ export default function App() {
       completedLevelsCount,
       levelsSinceLastInterstitialAd,
       lastInterstitialAdAt,
-    })
+    });
   }, [
     coins,
     completedLevelKeys,
@@ -819,19 +375,19 @@ export default function App() {
     purchasedStoreItemIds,
     lastInterstitialAdAt,
     levelsSinceLastInterstitialAd,
-  ])
+  ]);
 
   const appTheme = useMemo<AppThemePalette>(
     () => resolveAppTheme(equippedThemeCosmeticId),
     [equippedThemeCosmeticId],
-  )
+  );
 
   const activeNodeLineStyle = useMemo(
     () => resolveNodeLineStyle(equippedBoardCosmeticId),
     [equippedBoardCosmeticId],
-  )
+  );
 
-  const activeClassicPackId = selectedLevelPack?.id ?? DEFAULT_CLASSIC_PACK_ID
+  const activeClassicPackId = selectedLevelPack?.id ?? DEFAULT_CLASSIC_PACK_ID;
 
   const completedClassicLevelIds = useMemo(
     () =>
@@ -840,42 +396,42 @@ export default function App() {
         activeClassicPackId,
       ),
     [activeClassicPackId, completedLevelKeys],
-  )
+  );
 
   const completedDailyLevelIds = useMemo(
     () => getCompletedLevelIdsForMode(completedLevelKeys, "daily"),
     [completedLevelKeys],
-  )
+  );
 
   const completedWeeklyLevelIds = useMemo(
     () => getCompletedLevelIdsForMode(completedLevelKeys, "weekly"),
     [completedLevelKeys],
-  )
+  );
 
   const clearCompletionHold = useCallback(() => {
     if (!completionHoldTimeoutRef.current) {
-      return
+      return;
     }
 
-    clearTimeout(completionHoldTimeoutRef.current)
-    completionHoldTimeoutRef.current = null
-  }, [])
+    clearTimeout(completionHoldTimeoutRef.current);
+    completionHoldTimeoutRef.current = null;
+  }, []);
 
   useEffect(() => {
     return () => {
-      clearCompletionHold()
-    }
-  }, [clearCompletionHold])
+      clearCompletionHold();
+    };
+  }, [clearCompletionHold]);
 
   useEffect(() => {
     if (!soundEnabled) {
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-      return
+      void menuClickSoundRef.current?.unloadAsync();
+      menuClickSoundRef.current = null;
+      return;
     }
 
-    let cancelled = false
-    isMenuClickSoundLoadingRef.current = true
+    let cancelled = false;
+    isMenuClickSoundLoadingRef.current = true;
 
     const preloadMenuClickSound = async () => {
       try {
@@ -884,7 +440,7 @@ export default function App() {
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
-        })
+        });
 
         const { sound } = await Audio.Sound.createAsync(
           require("./sounds/button_click.mp3"),
@@ -892,77 +448,77 @@ export default function App() {
             shouldPlay: false,
             volume: 0.55,
           },
-        )
+        );
 
         if (cancelled) {
-          await sound.unloadAsync()
-          return
+          await sound.unloadAsync();
+          return;
         }
 
-        await menuClickSoundRef.current?.unloadAsync()
-        menuClickSoundRef.current = sound
+        await menuClickSoundRef.current?.unloadAsync();
+        menuClickSoundRef.current = sound;
       } catch {
         if (!cancelled) {
-          menuClickSoundRef.current = null
+          menuClickSoundRef.current = null;
         }
       } finally {
-        isMenuClickSoundLoadingRef.current = false
+        isMenuClickSoundLoadingRef.current = false;
       }
-    }
+    };
 
-    void preloadMenuClickSound()
+    void preloadMenuClickSound();
 
     return () => {
-      cancelled = true
-      isMenuClickSoundLoadingRef.current = false
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-    }
-  }, [soundEnabled])
+      cancelled = true;
+      isMenuClickSoundLoadingRef.current = false;
+      void menuClickSoundRef.current?.unloadAsync();
+      menuClickSoundRef.current = null;
+    };
+  }, [soundEnabled]);
 
   const playMenuClickSound = useCallback(() => {
     if (!soundEnabled || isMenuClickSoundLoadingRef.current) {
-      return
+      return;
     }
 
-    const currentSound = menuClickSoundRef.current
+    const currentSound = menuClickSoundRef.current;
     if (!currentSound) {
-      return
+      return;
     }
 
     void currentSound.replayAsync().catch(() => {
       // Ignore playback errors to keep navigation responsive.
-    })
-  }, [soundEnabled])
+    });
+  }, [soundEnabled]);
 
   const withMenuClickSound = useCallback(
     <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
       (...args: TArgs) => {
-        playMenuClickSound()
-        callback(...args)
+        playMenuClickSound();
+        callback(...args);
       },
     [playMenuClickSound],
-  )
+  );
 
   const handleRestoreAppInfo = useCallback(() => {
     if (!__DEV__) {
-      return
+      return;
     }
 
-    setLevel(1)
-    setCoins(0)
-    setNoAdsOwned(false)
-    setPurchasedStoreItemIds(new Set<string>())
-    setEquippedThemeCosmeticId(null)
-    setEquippedBoardCosmeticId(null)
-    setSelectedLevelPackId(null)
-    setCompletedLevelKeys(new Set<string>())
-    setCompletedLevelsCount(0)
-    setLevelsSinceLastInterstitialAd(0)
-    setLastInterstitialAdAt(Date.now())
-    setSessionLevelIds([])
-    setSessionIndex(0)
-    generatedModeLevelsRef.current.clear()
+    setLevel(1);
+    setCoins(0);
+    setNoAdsOwned(false);
+    setPurchasedStoreItemIds(new Set<string>());
+    setEquippedThemeCosmeticId(null);
+    setEquippedBoardCosmeticId(null);
+    setSelectedLevelPackId(null);
+    setCompletedLevelKeys(new Set<string>());
+    setCompletedLevelsCount(0);
+    setLevelsSinceLastInterstitialAd(0);
+    setLastInterstitialAdAt(Date.now());
+    setSessionLevelIds([]);
+    setSessionIndex(0);
+    generatedModeLevelsRef.current.clear();
     setTimeTrialState({
       nodeCount: null,
       durationSeconds: 30,
@@ -970,176 +526,110 @@ export default function App() {
       active: false,
       solvedCount: 0,
       earnedCoins: 0,
-    })
-    setPopupAdVisible(false)
-    setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-    setPendingPopupAdAction(null)
-    clearCompletionHold()
-    setIsLevelComplete(false)
-    setView("home")
-  }, [clearCompletionHold])
+    });
+    setPopupAdVisible(false);
+    setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+    setPendingPopupAdAction(null);
+    clearCompletionHold();
+    setIsLevelComplete(false);
+    setView("home");
+  }, [clearCompletionHold]);
 
   const loadLevel = useCallback(
     (levelId: number, mode: PlayMode, forcedTimeTrialNodeCount?: number) => {
-      clearCompletionHold()
-      let nextNodes: Node[] = []
-      let nextLinks: Link[] = []
+      clearCompletionHold();
+      const requiredNodeCount = requiredNodeCountByLevelId.get(levelId);
+      const generatedLevel = generateLevelForMode({
+        levelId,
+        mode,
+        width: GAME_WIDTH,
+        height: GAME_HEIGHT,
+        generatedModeLevelsCache: generatedModeLevelsRef.current,
+        selectedLevelPackId,
+        forcedTimeTrialNodeCount,
+        timeTrialNodeCount: timeTrialState.nodeCount,
+        requiredNodeCount,
+      });
 
-      if (mode === "daily" || mode === "weekly" || mode === "time-trial") {
-        const cacheKey = `${mode}-${levelId}`
-        const shouldUseCache = mode !== "time-trial"
-        const cachedLevel = shouldUseCache
-          ? generatedModeLevelsRef.current.get(cacheKey)
-          : undefined
-
-        if (cachedLevel) {
-          nextNodes = JSON.parse(JSON.stringify(cachedLevel.nodes))
-          nextLinks = JSON.parse(JSON.stringify(cachedLevel.links))
-        } else {
-          const nodeCount =
-            mode === "time-trial"
-              ? Math.max(
-                  5,
-                  forcedTimeTrialNodeCount ?? timeTrialState.nodeCount ?? 7,
-                )
-              : 7 + Math.floor(Math.random() * 7)
-
-          if (mode === "time-trial") {
-            let generatedNodes: Node[] = []
-            let generatedLinks: Link[] = []
-
-            for (
-              let attempt = 0;
-              attempt < MAX_TIME_TRIAL_GENERATION_ATTEMPTS;
-              attempt++
-            ) {
-              // Keep the requested node count exact for time trial generation.
-              const generatorLevel = (nodeCount - 4) * 2
-              const generatedLevel = generateLevel(
-                generatorLevel,
-                GAME_WIDTH,
-                GAME_HEIGHT,
-              )
-              const enrichedLinks = enrichTimeTrialLinks(
-                generatedLevel.nodes,
-                generatedLevel.links,
-              )
-
-              const normalizedAttemptNodes = normalizeNodePositions(
-                JSON.parse(JSON.stringify(generatedLevel.nodes)),
-                GAME_WIDTH,
-                GAME_HEIGHT,
-              )
-              const attemptIntersections = getIntersectingLinkIds(
-                normalizedAttemptNodes,
-                enrichedLinks,
-              )
-
-              generatedNodes = normalizedAttemptNodes
-              generatedLinks = JSON.parse(JSON.stringify(enrichedLinks))
-
-              if (attemptIntersections.size >= MIN_TIME_TRIAL_INTERSECTIONS) {
-                break
-              }
-            }
-
-            nextNodes = generatedNodes
-            nextLinks = generatedLinks
-          } else {
-            const generatorLevel = (nodeCount - 4) * 2
-            const generatedLevel = generateLevel(
-              generatorLevel,
-              GAME_WIDTH,
-              GAME_HEIGHT,
-            )
-
-            generatedModeLevelsRef.current.set(cacheKey, {
-              nodes: JSON.parse(JSON.stringify(generatedLevel.nodes)),
-              links: JSON.parse(JSON.stringify(generatedLevel.links)),
-            })
-
-            nextNodes = JSON.parse(JSON.stringify(generatedLevel.nodes))
-            nextLinks = JSON.parse(JSON.stringify(generatedLevel.links))
-          }
-        }
-      } else {
-        const levelData = levelById.get(levelId) ?? PRE_GENERATED_LEVELS[0]
-        nextNodes = JSON.parse(JSON.stringify(levelData.nodes))
-        nextLinks = JSON.parse(JSON.stringify(levelData.links))
-      }
+      const nextNodes = generatedLevel.nodes;
+      const nextLinks = generatedLevel.links;
 
       const normalizedNodes =
         mode === "time-trial"
           ? nextNodes
-          : normalizeNodePositions(nextNodes, GAME_WIDTH, GAME_HEIGHT)
+          : normalizeNodePositions(nextNodes, GAME_WIDTH, GAME_HEIGHT);
 
-      setNodes(normalizedNodes)
-      setLinks(nextLinks)
-      setLevel(levelId)
-      setMoves(0)
-      setIsLevelComplete(false)
-      setPlayMode(mode)
-      setView("game")
-      checkIntersections(normalizedNodes, nextLinks, false)
+      setNodes(normalizedNodes);
+      setLinks(nextLinks);
+      setLevel(levelId);
+      setIsLevelComplete(false);
+      setPlayMode(mode);
+      setView("game");
+      checkIntersections(normalizedNodes, nextLinks, false);
     },
-    [clearCompletionHold, levelById, timeTrialState.nodeCount],
-  )
+    [
+      clearCompletionHold,
+      requiredNodeCountByLevelId,
+      selectedLevelPackId,
+      timeTrialState.nodeCount,
+    ],
+  );
 
   const startSession = useCallback(
     (mode: PlayMode, levelIds: number[], forcedTimeTrialNodeCount?: number) => {
       if (levelIds.length === 0) {
-        return
+        return;
       }
-      setSessionLevelIds(levelIds)
-      setSessionIndex(0)
-      loadLevel(levelIds[0], mode, forcedTimeTrialNodeCount)
+      setSessionLevelIds(levelIds);
+      setSessionIndex(0);
+      loadLevel(levelIds[0], mode, forcedTimeTrialNodeCount);
     },
     [loadLevel],
-  )
+  );
 
   const startClassicLevel = useCallback(
     (levelId: number) => {
-      setSessionLevelIds([])
-      setSessionIndex(0)
-      loadLevel(levelId, "classic")
+      setSessionLevelIds([]);
+      setSessionIndex(0);
+      loadLevel(levelId, "classic");
     },
     [loadLevel],
-  )
+  );
 
   const startDailyLevel = useCallback(
     (levelId: number) => {
-      const levelIndex = DAILY_LEVEL_IDS.indexOf(levelId)
+      const levelIndex = DAILY_LEVEL_IDS.indexOf(levelId);
       if (levelIndex < 0) {
-        return
+        return;
       }
 
-      setSessionLevelIds(DAILY_LEVEL_IDS)
-      setSessionIndex(levelIndex)
-      loadLevel(levelId, "daily")
+      setSessionLevelIds(DAILY_LEVEL_IDS);
+      setSessionIndex(levelIndex);
+      loadLevel(levelId, "daily");
     },
     [loadLevel],
-  )
+  );
 
   const startWeeklyLevel = useCallback(
     (levelId: number) => {
-      const levelIndex = WEEKLY_LEVEL_IDS.indexOf(levelId)
+      const levelIndex = WEEKLY_LEVEL_IDS.indexOf(levelId);
       if (levelIndex < 0) {
-        return
+        return;
       }
 
-      setSessionLevelIds(WEEKLY_LEVEL_IDS)
-      setSessionIndex(levelIndex)
-      loadLevel(levelId, "weekly")
+      setSessionLevelIds(WEEKLY_LEVEL_IDS);
+      setSessionIndex(levelIndex);
+      loadLevel(levelId, "weekly");
     },
     [loadLevel],
-  )
+  );
 
   const startTimeTrial = useCallback(
     (nodeCount: number, duration: TrialDuration) => {
       const ordered = Array.from(
         { length: Math.max(PRE_GENERATED_LEVELS.length, 20) },
         (_, index) => index + 1,
-      )
+      );
 
       setTimeTrialState({
         nodeCount,
@@ -1148,147 +638,147 @@ export default function App() {
         active: true,
         solvedCount: 0,
         earnedCoins: 0,
-      })
-      startSession("time-trial", ordered, nodeCount)
+      });
+      startSession("time-trial", ordered, nodeCount);
     },
     [startSession],
-  )
+  );
 
   useEffect(() => {
     if (!popupAdVisible) {
-      return
+      return;
     }
 
     if (popupAdSecondsLeft <= 0) {
-      const nextAction = pendingPopupAdAction
-      setPopupAdVisible(false)
-      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-      setPendingPopupAdAction(null)
-      nextAction?.()
-      return
+      const nextAction = pendingPopupAdAction;
+      setPopupAdVisible(false);
+      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+      setPendingPopupAdAction(null);
+      nextAction?.();
+      return;
     }
 
     const timeoutId = setTimeout(() => {
-      setPopupAdSecondsLeft((previousSeconds) => previousSeconds - 1)
-    }, 1000)
+      setPopupAdSecondsLeft((previousSeconds) => previousSeconds - 1);
+    }, 1000);
 
     return () => {
-      clearTimeout(timeoutId)
-    }
-  }, [pendingPopupAdAction, popupAdSecondsLeft, popupAdVisible])
+      clearTimeout(timeoutId);
+    };
+  }, [pendingPopupAdAction, popupAdSecondsLeft, popupAdVisible]);
 
   const showPopupAd = useCallback(
     (nextAction: () => void) => {
       if (noAdsOwned) {
-        nextAction()
-        return
+        nextAction();
+        return;
       }
 
-      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-      setPendingPopupAdAction(() => nextAction)
-      setPopupAdVisible(true)
+      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+      setPendingPopupAdAction(() => nextAction);
+      setPopupAdVisible(true);
     },
     [noAdsOwned],
-  )
+  );
 
   const endTimeTrial = useCallback(() => {
     showPopupAd(() => {
-      setTimeTrialState((previous) => ({ ...previous, active: false }))
-      setView("time-trial-result")
-    })
-  }, [showPopupAd])
+      setTimeTrialState((previous) => ({ ...previous, active: false }));
+      setView("time-trial-result");
+    });
+  }, [showPopupAd]);
 
   const advanceSessionAfterWin = useCallback(() => {
     if (playMode === "classic") {
-      setView("complete")
-      return
+      setView("complete");
+      return;
     }
 
     if (playMode === "time-trial") {
       if (sessionLevelIds.length === 0) {
-        return
+        return;
       }
-      const nextIndex = (sessionIndex + 1) % sessionLevelIds.length
-      setSessionIndex(nextIndex)
-      loadLevel(sessionLevelIds[nextIndex], "time-trial")
-      return
+      const nextIndex = (sessionIndex + 1) % sessionLevelIds.length;
+      setSessionIndex(nextIndex);
+      loadLevel(sessionLevelIds[nextIndex], "time-trial");
+      return;
     }
 
-    setView("complete")
-  }, [loadLevel, playMode, sessionIndex, sessionLevelIds])
+    setView("complete");
+  }, [loadLevel, playMode, sessionIndex, sessionLevelIds]);
 
   const continueAfterWin = useCallback(() => {
     if (playMode === "time-trial") {
       setTimeout(() => {
-        setIsLevelComplete(false)
-        advanceSessionAfterWin()
-      }, 250)
-      return
+        setIsLevelComplete(false);
+        advanceSessionAfterWin();
+      }, 250);
+      return;
     }
 
     setTimeout(() => {
-      setView("complete")
-    }, 500)
-  }, [advanceSessionAfterWin, playMode])
+      setView("complete");
+    }, 500);
+  }, [advanceSessionAfterWin, playMode]);
 
   const handleWin = useCallback(() => {
-    clearCompletionHold()
-    setIsLevelComplete(true)
+    clearCompletionHold();
+    setIsLevelComplete(true);
 
     if (playMode === "time-trial") {
       setTimeTrialState((previous) => ({
         ...previous,
         solvedCount: previous.solvedCount + 1,
-      }))
+      }));
 
-      continueAfterWin()
-      return
+      continueAfterWin();
+      return;
     }
 
     const modeForCompletion: CompletionMode =
-      playMode === "daily" || playMode === "weekly" ? playMode : "classic"
+      playMode === "daily" || playMode === "weekly" ? playMode : "classic";
     const levelCompletionKey =
       modeForCompletion === "classic"
         ? classicPackCompletionKey(activeClassicPackId, level)
-        : completionKey(modeForCompletion, level)
-    const didCompleteNewLevel = !completedLevelKeys.has(levelCompletionKey)
+        : completionKey(modeForCompletion, level);
+    const didCompleteNewLevel = !completedLevelKeys.has(levelCompletionKey);
 
     if (didCompleteNewLevel) {
       setCompletedLevelKeys((previousCompletedLevels) => {
-        const nextCompletedLevels = new Set(previousCompletedLevels)
-        nextCompletedLevels.add(levelCompletionKey)
-        return nextCompletedLevels
-      })
+        const nextCompletedLevels = new Set(previousCompletedLevels);
+        nextCompletedLevels.add(levelCompletionKey);
+        return nextCompletedLevels;
+      });
     }
 
     const nextCompletedLevels = didCompleteNewLevel
       ? completedLevelsCount + 1
-      : completedLevelsCount
+      : completedLevelsCount;
     if (didCompleteNewLevel) {
-      setCompletedLevelsCount(nextCompletedLevels)
+      setCompletedLevelsCount(nextCompletedLevels);
     }
 
-    const earned = 5 + nodes.length
-    setCoins((previousCoins) => previousCoins + earned)
+    const earned = 5 + nodes.length;
+    setCoins((previousCoins) => previousCoins + earned);
 
-    const now = Date.now()
-    const nextAdEligibleLevelCount = levelsSinceLastInterstitialAd + 1
+    const now = Date.now();
+    const nextAdEligibleLevelCount = levelsSinceLastInterstitialAd + 1;
     const hasEnoughLevels =
-      nextAdEligibleLevelCount >= MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS
+      nextAdEligibleLevelCount >= MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS;
     const hasCooldownElapsed =
       lastInterstitialAdAt === null ||
-      now - lastInterstitialAdAt >= MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS
+      now - lastInterstitialAdAt >= MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS;
 
     if (!noAdsOwned && hasEnoughLevels && hasCooldownElapsed) {
-      setLevelsSinceLastInterstitialAd(0)
-      setLastInterstitialAdAt(now)
-      showPopupAd(continueAfterWin)
-      return
+      setLevelsSinceLastInterstitialAd(0);
+      setLastInterstitialAdAt(now);
+      showPopupAd(continueAfterWin);
+      return;
     }
 
-    setLevelsSinceLastInterstitialAd(nextAdEligibleLevelCount)
+    setLevelsSinceLastInterstitialAd(nextAdEligibleLevelCount);
 
-    continueAfterWin()
+    continueAfterWin();
   }, [
     clearCompletionHold,
     completedLevelsCount,
@@ -1301,7 +791,7 @@ export default function App() {
     noAdsOwned,
     levelsSinceLastInterstitialAd,
     showPopupAd,
-  ])
+  ]);
 
   const checkIntersections = useCallback(
     (
@@ -1309,32 +799,32 @@ export default function App() {
       currentLinks: Link[],
       triggerWin: boolean = true,
     ) => {
-      const intersections = getIntersectingLinkIds(currentNodes, currentLinks)
+      const intersections = getIntersectingLinkIds(currentNodes, currentLinks);
 
-      setIntersectingLinks(intersections)
+      setIntersectingLinks(intersections);
 
       if (!triggerWin || currentLinks.length === 0) {
-        clearCompletionHold()
-        return
+        clearCompletionHold();
+        return;
       }
 
       if (intersections.size > 0) {
-        clearCompletionHold()
+        clearCompletionHold();
         if (isLevelComplete) {
-          setIsLevelComplete(false)
+          setIsLevelComplete(false);
         }
-        return
+        return;
       }
 
       if (!isLevelComplete && !completionHoldTimeoutRef.current) {
         completionHoldTimeoutRef.current = setTimeout(() => {
-          completionHoldTimeoutRef.current = null
-          handleWin()
-        }, SOLVED_HOLD_DURATION_MS)
+          completionHoldTimeoutRef.current = null;
+          handleWin();
+        }, SOLVED_HOLD_DURATION_MS);
       }
     },
     [clearCompletionHold, handleWin, isLevelComplete],
-  )
+  );
 
   useEffect(() => {
     if (
@@ -1342,25 +832,25 @@ export default function App() {
       playMode !== "time-trial" ||
       !timeTrialState.active
     ) {
-      return
+      return;
     }
 
     const timerId = setInterval(() => {
       setTimeTrialState((previous) => {
         if (!previous.active) {
-          return previous
+          return previous;
         }
         if (previous.timeLeftSeconds <= 1) {
-          return { ...previous, timeLeftSeconds: 0, active: false }
+          return { ...previous, timeLeftSeconds: 0, active: false };
         }
-        return { ...previous, timeLeftSeconds: previous.timeLeftSeconds - 1 }
-      })
-    }, 1000)
+        return { ...previous, timeLeftSeconds: previous.timeLeftSeconds - 1 };
+      });
+    }, 1000);
 
     return () => {
-      clearInterval(timerId)
-    }
-  }, [playMode, timeTrialState.active, view])
+      clearInterval(timerId);
+    };
+  }, [playMode, timeTrialState.active, view]);
 
   useEffect(() => {
     if (
@@ -1371,7 +861,7 @@ export default function App() {
       !popupAdVisible &&
       !pendingPopupAdAction
     ) {
-      endTimeTrial()
+      endTimeTrial();
     }
   }, [
     endTimeTrial,
@@ -1381,23 +871,21 @@ export default function App() {
     timeTrialState.active,
     timeTrialState.timeLeftSeconds,
     view,
-  ])
+  ]);
 
   const handleNodeDrag = useCallback(
     (id: string, x: number, y: number) => {
       setNodes((previousNodes) => {
-        const nextNode = { id, x, y }
+        const nextNode = { id, x, y };
         const nextNodes = previousNodes.map((node) =>
           node.id === id ? nextNode : node,
-        )
-        checkIntersections(nextNodes, links)
-        return nextNodes
-      })
-
-      setMoves((previousMoves) => (previousMoves === 0 ? 1 : previousMoves + 1))
+        );
+        checkIntersections(nextNodes, links);
+        return nextNodes;
+      });
     },
     [checkIntersections, links],
-  )
+  );
 
   const handleNodeDragEnd = useCallback(
     (id: string, x: number, y: number) => {
@@ -1409,34 +897,34 @@ export default function App() {
           previousNodes,
           GAME_WIDTH,
           GAME_HEIGHT,
-        )
+        );
         const nextNodes = previousNodes.map((node) =>
           node.id === id ? snappedNode : node,
-        )
-        checkIntersections(nextNodes, links)
-        return nextNodes
-      })
+        );
+        checkIntersections(nextNodes, links);
+        return nextNodes;
+      });
     },
     [checkIntersections, links],
-  )
+  );
 
   const handleRestart = useCallback(() => {
-    loadLevel(level, playMode)
-  }, [level, loadLevel, playMode])
+    loadLevel(level, playMode);
+  }, [level, loadLevel, playMode]);
 
   const handleNextFromComplete = useCallback(() => {
     if (playMode === "daily" || playMode === "weekly") {
-      const nextIndex = sessionIndex + 1
+      const nextIndex = sessionIndex + 1;
       if (nextIndex >= sessionLevelIds.length) {
-        setView("home")
-        return
+        setView("home");
+        return;
       }
-      setSessionIndex(nextIndex)
-      loadLevel(sessionLevelIds[nextIndex], playMode)
-      return
+      setSessionIndex(nextIndex);
+      loadLevel(sessionLevelIds[nextIndex], playMode);
+      return;
     }
 
-    startClassicLevel(level + 1)
+    startClassicLevel(level + 1);
   }, [
     level,
     loadLevel,
@@ -1444,159 +932,237 @@ export default function App() {
     sessionIndex,
     sessionLevelIds,
     startClassicLevel,
-  ])
+  ]);
 
-  const handleBuyNoAds = useCallback(() => {
-    if (noAdsOwned || coins < NO_ADS_PRICE) {
-      return
+  const purchaseStoreItemByIdentifiers = useCallback(
+    async (identifiers: string[]): Promise<boolean> => {
+      if (Platform.OS !== "ios" && Platform.OS !== "android") {
+        return false;
+      }
+
+      try {
+        const offerings = await Purchases.getOfferings();
+        const matchingPackage = findRevenueCatPackageByIdentifiers(
+          offerings,
+          identifiers,
+        );
+
+        if (!matchingPackage) {
+          return false;
+        }
+
+        await Purchases.purchasePackage(matchingPackage);
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    [],
+  );
+
+  const triggerPurchaseCelebration = useCallback(() => {
+    setPurchaseCelebrationToken((previousToken) => previousToken + 1);
+  }, []);
+
+  const handleBuyNoAds = useCallback(async () => {
+    if (noAdsOwned) {
+      return;
     }
-    setCoins((previousCoins) => previousCoins - NO_ADS_PRICE)
-    setNoAdsOwned(true)
+
+    const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+      NO_ADS_REVENUECAT_ID,
+      NO_ADS_ITEM_ID,
+    ]);
+    if (!purchaseSucceeded) {
+      return;
+    }
+
+    setNoAdsOwned(true);
     setPurchasedStoreItemIds((previousOwnedItems) => {
-      const nextOwnedItems = new Set(previousOwnedItems)
-      nextOwnedItems.add(NO_ADS_ITEM_ID)
-      return nextOwnedItems
-    })
-  }, [coins, noAdsOwned])
+      const nextOwnedItems = new Set(previousOwnedItems);
+      nextOwnedItems.add(NO_ADS_ITEM_ID);
+      return nextOwnedItems;
+    });
+    triggerPurchaseCelebration();
+  }, [noAdsOwned, purchaseStoreItemByIdentifiers, triggerPurchaseCelebration]);
 
   const handleBuyCosmetic = useCallback(
-    (cosmetic: Cosmetic) => {
-      const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+    async (cosmetic: Cosmetic) => {
+      const cosmeticItemKey = `cosmetic:${cosmetic.id}`;
 
       if (purchasedStoreItemIds.has(cosmeticItemKey)) {
-        return
+        return;
       }
 
       if (cosmetic.priceType === "coins") {
         if (coins < cosmetic.price) {
-          return
+          return;
         }
 
-        setCoins((previousCoins) => previousCoins - cosmetic.price)
+        setCoins((previousCoins) => previousCoins - cosmetic.price);
+      } else {
+        const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+          cosmetic.id,
+        ]);
+        if (!purchaseSucceeded) {
+          return;
+        }
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(cosmeticItemKey)
-        return nextOwnedItems
-      })
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(cosmeticItemKey);
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
 
       if (cosmetic.category === "app-theme") {
-        setEquippedThemeCosmeticId(cosmetic.id)
-        return
+        setEquippedThemeCosmeticId(cosmetic.id);
+        return;
       }
 
-      setEquippedBoardCosmeticId(cosmetic.id)
+      setEquippedBoardCosmeticId(cosmetic.id);
     },
-    [coins, purchasedStoreItemIds],
-  )
+    [
+      coins,
+      purchasedStoreItemIds,
+      purchaseStoreItemByIdentifiers,
+      triggerPurchaseCelebration,
+    ],
+  );
 
   const handleBuyLevelPack = useCallback(
-    (levelPack: LevelPack) => {
-      const { storeItemId } = levelPack
-      const coinPrice = levelPack.price ?? 0
+    async (levelPack: LevelPack) => {
+      const { storeItemId } = levelPack;
+      const coinPrice = levelPack.price ?? 0;
 
       if (levelPack.defaultOwned || !storeItemId) {
-        return
+        return;
       }
 
       if (purchasedStoreItemIds.has(storeItemId)) {
-        return
+        return;
       }
 
       if (levelPack.priceType === "coins") {
         if (coins < coinPrice) {
-          return
+          return;
         }
 
-        setCoins((previousCoins) => previousCoins - coinPrice)
+        setCoins((previousCoins) => previousCoins - coinPrice);
+      } else {
+        const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+          levelPack.id,
+          storeItemId,
+        ]);
+        if (!purchaseSucceeded) {
+          return;
+        }
+        Alert.alert(
+          "Purchase successful!",
+          `You have unlocked ${levelPack.name}!`,
+        );
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(storeItemId)
-        return nextOwnedItems
-      })
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(storeItemId);
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
     },
-    [coins, purchasedStoreItemIds],
-  )
+    [
+      coins,
+      purchasedStoreItemIds,
+      purchaseStoreItemByIdentifiers,
+      triggerPurchaseCelebration,
+    ],
+  );
 
   const handleBuyCoinPack = useCallback(
-    (coinPack: CoinPack) => {
-      setCoins((previousCoins) => previousCoins + coinPack.coins)
+    async (coinPack: CoinPack) => {
+      const { storeItemId } = coinPack;
+      if (!storeItemId) {
+        return;
+      }
+
+      const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+        coinPack.id,
+        storeItemId,
+      ]);
+      if (!purchaseSucceeded) {
+        return;
+      }
+
+      setCoins((previousCoins) => previousCoins + coinPack.coins);
+      triggerPurchaseCelebration();
+      Alert.alert(
+        "Purchase successful!",
+        `You have received ${coinPack.coins} coins!`,
+      );
     },
-    [coins],
-  )
+    [purchaseStoreItemByIdentifiers, triggerPurchaseCelebration],
+  );
 
   const handleBuyThemePack = useCallback(
     async (themePack: ThemePack) => {
       if (purchasedStoreItemIds.has(themePack.id)) {
-        return
+        return;
       }
 
-      const shouldAllowDevFallback = __DEV__
-      let purchaseSucceeded = false
-
-      if (Platform.OS === "ios" || Platform.OS === "android") {
-        try {
-          const offerings = await Purchases.getOfferings()
-          const matchingPackage = findRevenueCatPackageByIdentifiers(
-            offerings,
-            [themePack.id],
-          )
-
-          if (matchingPackage) {
-            await Purchases.purchasePackage(matchingPackage)
-            purchaseSucceeded = true
-          }
-        } catch {
-          purchaseSucceeded = false
-        }
-      } else if (shouldAllowDevFallback) {
-        purchaseSucceeded = true
-      }
-
-      if (!purchaseSucceeded && !shouldAllowDevFallback) {
-        return
+      const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+        themePack.id,
+      ]);
+      if (!purchaseSucceeded) {
+        return;
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(themePack.id)
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(themePack.id);
         for (const cosmeticId of themePack.cosmeticIds) {
-          nextOwnedItems.add(`cosmetic:${cosmeticId}`)
+          nextOwnedItems.add(`cosmetic:${cosmeticId}`);
         }
-        return nextOwnedItems
-      })
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
+      Alert.alert(
+        "Purchase successful!",
+        `You have unlocked ${themePack.name}!`,
+      );
     },
-    [purchasedStoreItemIds],
-  )
+    [
+      purchasedStoreItemIds,
+      purchaseStoreItemByIdentifiers,
+      triggerPurchaseCelebration,
+    ],
+  );
 
   const handleApplyDefaultTheme = useCallback(() => {
-    setEquippedThemeCosmeticId(null)
-  }, [])
+    setEquippedThemeCosmeticId(null);
+  }, []);
 
   const handleApplyCosmetic = useCallback(
     (cosmetic: Cosmetic) => {
-      const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+      const cosmeticItemKey = `cosmetic:${cosmetic.id}`;
       if (!purchasedStoreItemIds.has(cosmeticItemKey)) {
-        return
+        return;
       }
 
       if (cosmetic.category === "app-theme") {
-        setEquippedThemeCosmeticId(cosmetic.id)
-        return
+        setEquippedThemeCosmeticId(cosmetic.id);
+        return;
       }
 
-      setEquippedBoardCosmeticId(cosmetic.id)
+      setEquippedBoardCosmeticId(cosmetic.id);
     },
     [purchasedStoreItemIds],
-  )
+  );
 
   const handleSelectLevelPack = useCallback((packId: string) => {
-    setSelectedLevelPackId(packId)
-    setView("levels")
-  }, [])
+    setSelectedLevelPackId(packId);
+    setView("levels");
+  }, []);
 
   return (
     <GestureHandlerRootView
@@ -1714,6 +1280,7 @@ export default function App() {
           themePackPriceLabels={themePackPriceLabels}
           onApplyDefaultTheme={handleApplyDefaultTheme}
           onApplyCosmetic={handleApplyCosmetic}
+          purchaseCelebrationToken={purchaseCelebrationToken}
         />
       )}
 
@@ -1725,7 +1292,6 @@ export default function App() {
           nodes={nodes}
           links={links}
           intersectingLinks={intersectingLinks}
-          moves={moves}
           trialTimeLeftSeconds={
             playMode === "time-trial"
               ? timeTrialState.timeLeftSeconds
@@ -1736,14 +1302,14 @@ export default function App() {
           onBackHome={() => setView("home")}
           onOpenLevels={() => {
             if (playMode === "daily" || playMode === "weekly") {
-              setView("daily-weekly-levels")
-              return
+              setView("daily-weekly-levels");
+              return;
             }
             if (playMode === "time-trial") {
-              setView("time-trial")
-              return
+              setView("time-trial");
+              return;
             }
-            setView("levels")
+            setView("levels");
           }}
           onRestart={handleRestart}
           onNodeDrag={handleNodeDrag}
@@ -1806,5 +1372,5 @@ export default function App() {
       </Modal>
       {/* </SafeAreaView> */}
     </GestureHandlerRootView>
-  )
+  );
 }

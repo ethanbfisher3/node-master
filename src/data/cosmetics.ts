@@ -1,44 +1,44 @@
 export type AppThemePalette = {
-  background: string
-  surface: string
-  surfaceAlt: string
-  primary: string
-  text: string
-  mutedText: string
-  cardText: string
-  cardMutedText: string
-  buttonText: string
-}
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  primary: string;
+  text: string;
+  mutedText: string;
+  cardText: string;
+  cardMutedText: string;
+  buttonText: string;
+};
 
 export type NodeLineStylePalette = {
-  nodeFill: string
-  nodeBorder: string
-  nodeDot: string
-  line: string
-  intersectingLine: string
-}
+  nodeFill: string;
+  nodeBorder: string;
+  nodeDot: string;
+  line: string;
+  intersectingLine: string;
+};
 
-export type CosmeticCategory = "app-theme" | "node-line-style"
+export type CosmeticCategory = "app-theme" | "node-line-style";
 
 export type Cosmetic = {
-  id: string
-  category: CosmeticCategory
-  name: string
-  description: string
-  price: number
-  priceType: "coins" | "real-money"
-  owned: boolean
-  image: string | null
-  theme?: Partial<AppThemePalette>
-  nodeLineStyle?: Partial<NodeLineStylePalette>
-}
+  id: string;
+  category: CosmeticCategory;
+  name: string;
+  description: string;
+  price: number;
+  priceType: "coins" | "real-money";
+  owned: boolean;
+  image: string | null;
+  theme?: Partial<AppThemePalette>;
+  nodeLineStyle?: Partial<NodeLineStylePalette>;
+};
 
 export type ThemePack = {
-  id: "theme_pack_light" | "theme_pack_dark"
-  name: string
-  description: string
-  cosmeticIds: string[]
-}
+  id: "theme_pack_light" | "theme_pack_dark";
+  name: string;
+  description: string;
+  cosmeticIds: string[];
+};
 
 export const DEFAULT_APP_THEME: AppThemePalette = {
   background: "#f8fafc",
@@ -50,7 +50,7 @@ export const DEFAULT_APP_THEME: AppThemePalette = {
   cardText: "#0f172a",
   cardMutedText: "#64748b",
   buttonText: "#ffffff",
-}
+};
 
 export const DEFAULT_NODE_LINE_STYLE: NodeLineStylePalette = {
   nodeFill: "#ffffff",
@@ -58,7 +58,7 @@ export const DEFAULT_NODE_LINE_STYLE: NodeLineStylePalette = {
   nodeDot: "#0f172a",
   line: "#10B981",
   intersectingLine: "#EF4444",
-}
+};
 
 const cosmetics: Cosmetic[] = [
   {
@@ -414,7 +414,58 @@ const cosmetics: Cosmetic[] = [
       intersectingLine: "#ef4444",
     },
   },
-]
+  {
+    id: "midnight-circuit-style",
+    category: "node-line-style",
+    name: "Midnight Circuit",
+    description: "Dark navy nodes with electric blue circuit lines.",
+    price: 250,
+    priceType: "coins",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#0b1220",
+      nodeBorder: "#60a5fa",
+      nodeDot: "#e0f2fe",
+      line: "#2563eb",
+      intersectingLine: "#fb7185",
+    },
+  },
+  {
+    id: "ember-void-style",
+    category: "node-line-style",
+    name: "Ember Void",
+    description: "Smoldering ember links over deep charcoal nodes.",
+    price: 265,
+    priceType: "coins",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#1f1515",
+      nodeBorder: "#f97316",
+      nodeDot: "#fde68a",
+      line: "#ea580c",
+      intersectingLine: "#ef4444",
+    },
+  },
+  {
+    id: "toxic-night-style",
+    category: "node-line-style",
+    name: "Toxic Night",
+    description: "Neon lime lines and dark slate nodes for high contrast.",
+    price: 2.49,
+    priceType: "real-money",
+    owned: false,
+    image: null,
+    nodeLineStyle: {
+      nodeFill: "#0f172a",
+      nodeBorder: "#a3e635",
+      nodeDot: "#ecfccb",
+      line: "#84cc16",
+      intersectingLine: "#f43f5e",
+    },
+  },
+];
 
 export const THEME_PACKS: ThemePack[] = [
   {
@@ -450,20 +501,20 @@ export const THEME_PACKS: ThemePack[] = [
       "dark-ember-theme",
       "espresso-theme",
       "evergreen-night-theme",
-      "neon-grid-style",
-      "graphite-style",
-      "ocean-current-style",
+      "midnight-circuit-style",
+      "ember-void-style",
+      "toxic-night-style",
     ],
   },
-]
+];
 
 export function resolveAppTheme(
   cosmeticId: string | null | undefined,
 ): AppThemePalette {
   const selectedCosmetic = cosmetics.find(
     (item) => item.id === cosmeticId && item.category === "app-theme",
-  )
-  return { ...DEFAULT_APP_THEME, ...(selectedCosmetic?.theme ?? {}) }
+  );
+  return { ...DEFAULT_APP_THEME, ...(selectedCosmetic?.theme ?? {}) };
 }
 
 export function resolveNodeLineStyle(
@@ -471,11 +522,11 @@ export function resolveNodeLineStyle(
 ): NodeLineStylePalette {
   const selectedCosmetic = cosmetics.find(
     (item) => item.id === cosmeticId && item.category === "node-line-style",
-  )
+  );
   return {
     ...DEFAULT_NODE_LINE_STYLE,
     ...(selectedCosmetic?.nodeLineStyle ?? {}),
-  }
+  };
 }
 
-export default cosmetics
+export default cosmetics;

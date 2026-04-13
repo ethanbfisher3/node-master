@@ -24,6 +24,7 @@
     "expo": "^54.0.0",
     "expo-av": "^16.0.8",
     "expo-dev-client": "~6.0.20",
+    "expo-navigation-bar": "~5.0.10",
     "expo-system-ui": "^55.0.15",
     "express": "^4.21.2",
     "lucide-react": "^0.546.0",
