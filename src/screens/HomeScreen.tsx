@@ -163,7 +163,7 @@ export function HomeScreen({
             <Text
               style={[styles.homeMenuButtonTitle, { color: activeTheme.text }]}
             >
-              RESTORE APP INFO
+              (DEV) RESTORE APP INFO
             </Text>
           </TouchableOpacity>
         )}

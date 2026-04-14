@@ -1,47 +1,37 @@
 export type AppThemePalette = {
-  background: string
-  surface: string
-  surfaceAlt: string
-  primary: string
-  text: string
-  mutedText: string
-  cardText: string
-  cardMutedText: string
-  buttonText: string
-  appTexture?: "wood" | "silver" | "bronze"
-  appTextureSource?: number
-}
+  background: string;
+  surface: string;
+  surfaceAlt: string;
+  primary: string;
+  text: string;
+  mutedText: string;
+  cardText: string;
+  cardMutedText: string;
+  buttonText: string;
+  appTexture?: "wood" | "silver" | "bronze" | "marble" | "granite";
+  appTextureSource?: number;
+};
 
-export type NodeLineStylePalette = {
-  nodeFill: string
-  nodeBorder: string
-  nodeDot: string
-  line: string
-  intersectingLine: string
-  nodeTexture?: "wood"
-}
-
-export type CosmeticCategory = "app-theme" | "node-line-style"
+export type CosmeticCategory = "app-theme";
 
 export type Cosmetic = {
-  id: string
-  category: CosmeticCategory
-  name: string
-  description: string
-  price: number
-  priceType: "coins" | "real-money"
-  owned: boolean
-  image: string | null
-  theme?: Partial<AppThemePalette>
-  nodeLineStyle?: Partial<NodeLineStylePalette>
-}
+  id: string;
+  category: CosmeticCategory;
+  name: string;
+  description: string;
+  price: number;
+  priceType: "coins" | "real-money";
+  owned: boolean;
+  image: string | null;
+  theme?: Partial<AppThemePalette>;
+};
 
 export type ThemePack = {
-  id: "theme_pack_light" | "theme_pack_dark" | "theme_pack_textures"
-  name: string
-  description: string
-  cosmeticIds: string[]
-}
+  id: "theme_pack_light" | "theme_pack_dark" | "theme_pack_textures";
+  name: string;
+  description: string;
+  cosmeticIds: string[];
+};
 
 export const DEFAULT_APP_THEME: AppThemePalette = {
   background: "#f8fafc",
@@ -53,15 +43,7 @@ export const DEFAULT_APP_THEME: AppThemePalette = {
   cardText: "#0f172a",
   cardMutedText: "#64748b",
   buttonText: "#ffffff",
-}
-
-export const DEFAULT_NODE_LINE_STYLE: NodeLineStylePalette = {
-  nodeFill: "#ffffff",
-  nodeBorder: "#0f172a",
-  nodeDot: "#0f172a",
-  line: "#10B981",
-  intersectingLine: "#EF4444",
-}
+};
 
 const cosmetics: Cosmetic[] = [
   {
@@ -333,142 +315,6 @@ const cosmetics: Cosmetic[] = [
     },
   },
   {
-    id: "neon-grid-style",
-    category: "node-line-style",
-    name: "Neon Grid",
-    description: "Electric cyan links with bright magenta nodes.",
-    price: 180,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#ecfeff",
-      nodeBorder: "#c026d3",
-      nodeDot: "#701a75",
-      line: "#06b6d4",
-      intersectingLine: "#f43f5e",
-    },
-  },
-  {
-    id: "aurora-style",
-    category: "node-line-style",
-    name: "Aurora",
-    description: "Icy mint nodes with a vivid teal-to-blue feel.",
-    price: 220,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#ecfeff",
-      nodeBorder: "#0f766e",
-      nodeDot: "#134e4a",
-      line: "#14b8a6",
-      intersectingLine: "#f97316",
-    },
-  },
-  {
-    id: "amber-wire-style",
-    category: "node-line-style",
-    name: "Amber Wire",
-    description: "Warm amber links with deep cocoa node borders.",
-    price: 210,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#fffbeb",
-      nodeBorder: "#78350f",
-      nodeDot: "#92400e",
-      line: "#d97706",
-      intersectingLine: "#dc2626",
-    },
-  },
-  {
-    id: "graphite-style",
-    category: "node-line-style",
-    name: "Graphite",
-    description: "Minimal charcoal nodes with clean slate lines.",
-    price: 240,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#f8fafc",
-      nodeBorder: "#334155",
-      nodeDot: "#0f172a",
-      line: "#475569",
-      intersectingLine: "#ef4444",
-    },
-  },
-  {
-    id: "ocean-current-style",
-    category: "node-line-style",
-    name: "Ocean Current",
-    description: "Blue current links and cool slate nodes.",
-    price: 2.49,
-    priceType: "real-money",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#f0f9ff",
-      nodeBorder: "#1e3a8a",
-      nodeDot: "#0f172a",
-      line: "#0284c7",
-      intersectingLine: "#ef4444",
-    },
-  },
-  {
-    id: "midnight-circuit-style",
-    category: "node-line-style",
-    name: "Midnight Circuit",
-    description: "Dark navy nodes with electric blue circuit lines.",
-    price: 250,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#0b1220",
-      nodeBorder: "#60a5fa",
-      nodeDot: "#e0f2fe",
-      line: "#2563eb",
-      intersectingLine: "#fb7185",
-    },
-  },
-  {
-    id: "ember-void-style",
-    category: "node-line-style",
-    name: "Ember Void",
-    description: "Smoldering ember links over deep charcoal nodes.",
-    price: 265,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#1f1515",
-      nodeBorder: "#f97316",
-      nodeDot: "#fde68a",
-      line: "#ea580c",
-      intersectingLine: "#ef4444",
-    },
-  },
-  {
-    id: "toxic-night-style",
-    category: "node-line-style",
-    name: "Toxic Night",
-    description: "Neon lime lines and dark slate nodes for high contrast.",
-    price: 2.49,
-    priceType: "real-money",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#0f172a",
-      nodeBorder: "#a3e635",
-      nodeDot: "#ecfccb",
-      line: "#84cc16",
-      intersectingLine: "#f43f5e",
-    },
-  },
-  {
     id: "wood-grain-theme",
     category: "app-theme",
     name: "Wood Grain",
@@ -479,7 +325,7 @@ const cosmetics: Cosmetic[] = [
     image: null,
     theme: {
       primary: "#8b5a2b",
-      background: "rgba(247, 239, 227, 0.6)",
+      background: "rgba(247, 239, 227, 0.3)",
       surface: "rgba(255, 250, 243, 0.6)",
       surfaceAlt: "rgba(232, 212, 189, 0.6)",
       text: "#4a2e1b",
@@ -538,27 +384,6 @@ const cosmetics: Cosmetic[] = [
     },
   },
   {
-    id: "platinum-ice-theme",
-    category: "app-theme",
-    name: "Platinum Ice",
-    description: "Polished platinum tones with icy high contrast.",
-    price: 290,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    theme: {
-      primary: "#cbd5e1",
-      background: "#f8fafc",
-      surface: "#ffffff",
-      surfaceAlt: "#e2e8f0",
-      text: "#1e293b",
-      mutedText: "#64748b",
-      cardText: "#1e293b",
-      cardMutedText: "#64748b",
-      buttonText: "#0f172a",
-    },
-  },
-  {
     id: "marble-ivory-theme",
     category: "app-theme",
     name: "Marble Ivory",
@@ -569,110 +394,48 @@ const cosmetics: Cosmetic[] = [
     image: null,
     theme: {
       primary: "#64748b",
-      background: "#f8f7f4",
-      surface: "#ffffff",
-      surfaceAlt: "#eceff3",
+      background: "rgba(248, 250, 252, 0.6)",
+      surface: "rgba(255, 255, 255, 0.6)",
+      surfaceAlt: "rgba(236, 239, 243, 0.9)",
       text: "#334155",
       mutedText: "#64748b",
       cardText: "#334155",
       cardMutedText: "#64748b",
       buttonText: "#ffffff",
+      appTexture: "marble",
+      appTextureSource: require("../images/marble_texture.jpg"),
     },
   },
   {
-    id: "wood-lattice-style",
-    category: "node-line-style",
-    name: "Wood Lattice",
-    description: "Carved wood nodes and lattice-like warm linework.",
-    price: 260,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#f8ead8",
-      nodeBorder: "#7c4a25",
-      nodeDot: "#5b3418",
-      line: "#a16207",
-      intersectingLine: "#dc2626",
-      nodeTexture: "wood",
-    },
-  },
-  {
-    id: "silver-filament-style",
-    category: "node-line-style",
-    name: "Silver Filament",
-    description: "Sleek silver nodes and cool metallic filament links.",
-    price: 270,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#f8fafc",
-      nodeBorder: "#94a3b8",
-      nodeDot: "#475569",
-      line: "#64748b",
-      intersectingLine: "#ef4444",
-    },
-  },
-  {
-    id: "bronze-chain-style",
-    category: "node-line-style",
-    name: "Bronze Chain",
-    description: "Heavy bronze node rings with chain-like connectors.",
-    price: 280,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#fff1e3",
-      nodeBorder: "#b45309",
-      nodeDot: "#92400e",
-      line: "#c2410c",
-      intersectingLine: "#e11d48",
-    },
-  },
-  {
-    id: "platinum-grid-style",
-    category: "node-line-style",
-    name: "Platinum Grid",
-    description: "Platinum nodes with bright technical grid lines.",
-    price: 290,
-    priceType: "coins",
-    owned: false,
-    image: null,
-    nodeLineStyle: {
-      nodeFill: "#ffffff",
-      nodeBorder: "#cbd5e1",
-      nodeDot: "#334155",
-      line: "#94a3b8",
-      intersectingLine: "#f43f5e",
-    },
-  },
-  {
-    id: "granite-vein-style",
-    category: "node-line-style",
-    name: "Granite Vein",
-    description: "Stone-inspired nodes with slate vein linework.",
+    id: "granite-theme",
+    category: "app-theme",
+    name: "Granite",
+    description: "Deep gray stone tones with warm undertones.",
     price: 300,
     priceType: "coins",
     owned: false,
     image: null,
-    nodeLineStyle: {
-      nodeFill: "#f1f5f9",
-      nodeBorder: "#475569",
-      nodeDot: "#1e293b",
-      line: "#64748b",
-      intersectingLine: "#ef4444",
+    theme: {
+      primary: "#525c66",
+      background: "rgba(226, 232, 240, 0.68)",
+      surface: "rgba(241, 245, 249, 0.72)",
+      surfaceAlt: "rgba(203, 213, 225, 0.88)",
+      text: "#1f2937",
+      mutedText: "#475569",
+      cardText: "#1f2937",
+      cardMutedText: "#475569",
+      buttonText: "#f8fafc",
+      appTexture: "granite",
+      appTextureSource: require("../images/granite_texture.jpg"),
     },
   },
-]
+];
 
 export const THEME_PACKS: ThemePack[] = [
   {
     id: "theme_pack_light",
     name: "Light Theme Pack",
-    description:
-      "A curated set of bright themes and node styles for a clean daytime look.",
+    description: "A curated set of bright themes for a clean daytime look.",
     cosmeticIds: [
       "green-theme",
       "sunset-theme",
@@ -682,18 +445,12 @@ export const THEME_PACKS: ThemePack[] = [
       "violet-theme",
       "berry-theme",
       "forest-theme",
-      "neon-grid-style",
-      "aurora-style",
-      "amber-wire-style",
-      "graphite-style",
-      "ocean-current-style",
     ],
   },
   {
     id: "theme_pack_dark",
     name: "Dark Theme Pack",
-    description:
-      "A curated set of dark themes and bold node styles for a night-mode vibe.",
+    description: "A curated set of dark themes for a night-mode vibe.",
     cosmeticIds: [
       "obsidian-theme",
       "midnight-theme",
@@ -701,50 +458,31 @@ export const THEME_PACKS: ThemePack[] = [
       "dark-ember-theme",
       "espresso-theme",
       "evergreen-night-theme",
-      "midnight-circuit-style",
-      "ember-void-style",
-      "toxic-night-style",
     ],
   },
   {
     id: "theme_pack_textures",
     name: "Texture Pack",
     description:
-      "A curated collection of wood, silver, bronze, platinum, and stone-inspired looks for themes and node styles.",
+      "A curated collection of wood, silver, bronze, platinum, and stone-inspired looks for themes.",
     cosmeticIds: [
       "wood-grain-theme",
       "silver-satin-theme",
       "bronze-forge-theme",
       "platinum-ice-theme",
       "marble-ivory-theme",
-      "wood-lattice-style",
-      "silver-filament-style",
-      "bronze-chain-style",
-      "platinum-grid-style",
-      "granite-vein-style",
+      "granite-theme",
     ],
   },
-]
+];
 
 export function resolveAppTheme(
   cosmeticId: string | null | undefined,
 ): AppThemePalette {
   const selectedCosmetic = cosmetics.find(
     (item) => item.id === cosmeticId && item.category === "app-theme",
-  )
-  return { ...DEFAULT_APP_THEME, ...(selectedCosmetic?.theme ?? {}) }
+  );
+  return { ...DEFAULT_APP_THEME, ...(selectedCosmetic?.theme ?? {}) };
 }
 
-export function resolveNodeLineStyle(
-  cosmeticId: string | null | undefined,
-): NodeLineStylePalette {
-  const selectedCosmetic = cosmetics.find(
-    (item) => item.id === cosmeticId && item.category === "node-line-style",
-  )
-  return {
-    ...DEFAULT_NODE_LINE_STYLE,
-    ...(selectedCosmetic?.nodeLineStyle ?? {}),
-  }
-}
-
-export default cosmetics
+export default cosmetics;

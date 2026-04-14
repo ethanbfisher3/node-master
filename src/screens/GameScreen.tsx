@@ -1,23 +1,21 @@
-import React, { useEffect, useMemo } from "react"
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import Svg, { Line } from "react-native-svg"
-import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native"
+import React, { useEffect, useMemo } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Svg, { Line } from "react-native-svg";
+import { ArrowLeft, Coins, LayoutGrid, RotateCcw } from "lucide-react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
-} from "react-native-reanimated"
+} from "react-native-reanimated";
 
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import {
-  AppThemePalette,
-  DEFAULT_APP_THEME,
-  DEFAULT_NODE_LINE_STYLE,
-  NodeLineStylePalette,
-} from "../data/cosmetics"
-import { DraggableNode } from "../components/DraggableNode"
-import { styles } from "../styles"
-import { Link, Node } from "../utils/gameLogic"
+  DraggableNode,
+  type NodeVisualStyle,
+} from "../components/DraggableNode";
+import { styles } from "../styles";
+import { Link, Node } from "../utils/gameLogic";
 
 const CONFETTI_COLORS = [
   "#4ade80",
@@ -28,9 +26,9 @@ const CONFETTI_COLORS = [
   "#c084fc",
   "#2dd4bf",
   "#fef08a",
-]
+];
 
-const CONFETTI_DURATION = 800
+const CONFETTI_DURATION = 800;
 
 const CONFETTI_SHAPES = [
   { size: 16, borderRadius: 999 },
@@ -48,16 +46,16 @@ const CONFETTI_SHAPES = [
   { size: 16, borderRadius: 999 },
   { size: 18, borderRadius: 2 },
   { size: 15, borderRadius: 999 },
-]
+];
 
 function hashString(value: string) {
-  let hash = 0
+  let hash = 0;
 
   for (let index = 0; index < value.length; index += 1) {
-    hash = (hash * 31 + value.charCodeAt(index)) >>> 0
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
   }
 
-  return hash
+  return hash;
 }
 
 function createConfettiVector(
@@ -65,24 +63,24 @@ function createConfettiVector(
   nodeId: string,
   pieceIndex: number,
 ) {
-  const hash = hashString(`${seed}:${nodeId}:${pieceIndex}`)
-  const angle = ((hash % 360) * Math.PI) / 180
-  const distance = 30 + (hash % 26)
-  const lift = 12 + ((hash >> 3) % 12)
-  const sway = ((hash >> 5) % 2 === 0 ? 1 : -1) * (8 + ((hash >> 7) % 12))
+  const hash = hashString(`${seed}:${nodeId}:${pieceIndex}`);
+  const angle = ((hash % 360) * Math.PI) / 180;
+  const distance = 30 + (hash % 26);
+  const lift = 12 + ((hash >> 3) % 12);
+  const sway = ((hash >> 5) % 2 === 0 ? 1 : -1) * (8 + ((hash >> 7) % 12));
 
-  return { angle, distance, lift, sway }
+  return { angle, distance, lift, sway };
 }
 
 function getConfettiColor(seed: string, nodeId: string, pieceIndex: number) {
-  const hash = hashString(`${seed}:${nodeId}:${pieceIndex}:color`)
-  return CONFETTI_COLORS[hash % CONFETTI_COLORS.length]
+  const hash = hashString(`${seed}:${nodeId}:${pieceIndex}:color`);
+  return CONFETTI_COLORS[hash % CONFETTI_COLORS.length];
 }
 
 type ConfettiBurstProps = {
-  node: Node
-  seed: string
-}
+  node: Node;
+  seed: string;
+};
 
 function ConfettiBurst({ node, seed }: ConfettiBurstProps) {
   return (
@@ -97,44 +95,44 @@ function ConfettiBurst({ node, seed }: ConfettiBurstProps) {
         />
       ))}
     </>
-  )
+  );
 }
 
 type ConfettiPieceProps = {
-  node: Node
-  seed: string
-  pieceIndex: number
-  shape: { size: number; borderRadius: number }
-}
+  node: Node;
+  seed: string;
+  pieceIndex: number;
+  shape: { size: number; borderRadius: number };
+};
 
 function ConfettiPiece({ node, seed, pieceIndex, shape }: ConfettiPieceProps) {
-  const progress = useSharedValue(0)
-  const opacity = useSharedValue(1)
+  const progress = useSharedValue(0);
+  const opacity = useSharedValue(1);
 
   useEffect(() => {
-    progress.value = 0
-    opacity.value = 1
+    progress.value = 0;
+    opacity.value = 1;
 
     progress.value = withTiming(1, {
       duration: CONFETTI_DURATION,
       easing: Easing.out(Easing.cubic),
-    })
+    });
     opacity.value = withTiming(0, {
       duration: CONFETTI_DURATION,
       easing: Easing.out(Easing.quad),
-    })
-  }, [opacity, progress, seed])
+    });
+  }, [opacity, progress, seed]);
 
   const vector = useMemo(
     () => createConfettiVector(seed, node.id, pieceIndex),
     [node.id, pieceIndex, seed],
-  )
+  );
 
   const animatedStyle = useAnimatedStyle(() => {
-    const travelX = Math.cos(vector.angle) * vector.distance * progress.value
+    const travelX = Math.cos(vector.angle) * vector.distance * progress.value;
     const travelY =
       Math.sin(vector.angle) * vector.distance * progress.value -
-      vector.lift * progress.value
+      vector.lift * progress.value;
 
     return {
       opacity: opacity.value,
@@ -144,8 +142,8 @@ function ConfettiPiece({ node, seed, pieceIndex, shape }: ConfettiPieceProps) {
         { scale: 1 - progress.value * 0.35 },
         { rotate: `${progress.value * 140}deg` },
       ],
-    }
-  })
+    };
+  });
 
   return (
     <Animated.View
@@ -167,26 +165,25 @@ function ConfettiPiece({ node, seed, pieceIndex, shape }: ConfettiPieceProps) {
         animatedStyle,
       ]}
     />
-  )
+  );
 }
 
 type GameScreenProps = {
-  level: number
-  coins: number
-  nodes: Node[]
-  links: Link[]
-  intersectingLinks: Set<string>
-  isLevelComplete: boolean
-  trialTimeLeftSeconds?: number
-  noAdsOwned: boolean
-  theme?: AppThemePalette
-  nodeLineStyle?: NodeLineStylePalette
-  onBackHome: () => void
-  onOpenLevels: () => void
-  onRestart: () => void
-  onNodeDrag: (id: string, x: number, y: number) => void
-  onNodeDragEnd: (id: string, x: number, y: number) => void
-}
+  level: number;
+  coins: number;
+  nodes: Node[];
+  links: Link[];
+  intersectingLinks: Set<string>;
+  isLevelComplete: boolean;
+  trialTimeLeftSeconds?: number;
+  noAdsOwned: boolean;
+  theme?: AppThemePalette;
+  onBackHome: () => void;
+  onOpenLevels: () => void;
+  onRestart: () => void;
+  onNodeDrag: (id: string, x: number, y: number) => void;
+  onNodeDragEnd: (id: string, x: number, y: number) => void;
+};
 
 export function GameScreen({
   level,
@@ -198,15 +195,27 @@ export function GameScreen({
   trialTimeLeftSeconds,
   noAdsOwned,
   theme,
-  nodeLineStyle,
   onBackHome,
   onOpenLevels,
   onRestart,
   onNodeDrag,
   onNodeDragEnd,
 }: GameScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
-  const activeNodeLineStyle = nodeLineStyle ?? DEFAULT_NODE_LINE_STYLE
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const activeNodeStyle = useMemo<NodeVisualStyle>(
+    () => ({
+      nodeFill: activeTheme.surface,
+      nodeBorder: activeTheme.text,
+      nodeDot: activeTheme.primary,
+      textureSource: activeTheme.appTextureSource,
+    }),
+    [
+      activeTheme.primary,
+      activeTheme.surface,
+      activeTheme.text,
+      activeTheme.appTextureSource,
+    ],
+  );
 
   return (
     <View
@@ -279,9 +288,9 @@ export function GameScreen({
       >
         <Svg style={styles.boardSvg}>
           {links.map((link) => {
-            const n1 = nodes.find((node) => node.id === link.node1Id)!
-            const n2 = nodes.find((node) => node.id === link.node2Id)!
-            const isIntersecting = intersectingLinks.has(link.id)
+            const n1 = nodes.find((node) => node.id === link.node1Id)!;
+            const n2 = nodes.find((node) => node.id === link.node2Id)!;
+            const isIntersecting = intersectingLinks.has(link.id);
 
             return (
               <Line
@@ -290,15 +299,11 @@ export function GameScreen({
                 y1={n1.y}
                 x2={n2.x}
                 y2={n2.y}
-                stroke={
-                  isIntersecting
-                    ? activeNodeLineStyle.intersectingLine
-                    : activeNodeLineStyle.line
-                }
+                stroke={isIntersecting ? "#ef4444" : activeTheme.primary}
                 strokeWidth={isIntersecting ? 6 : 4}
                 strokeLinecap="round"
               />
-            )
+            );
           })}
         </Svg>
 
@@ -306,7 +311,7 @@ export function GameScreen({
           <View key={node.id}>
             <DraggableNode
               node={node}
-              nodeStyle={activeNodeLineStyle}
+              nodeStyle={activeNodeStyle}
               onDrag={onNodeDrag}
               onDragEnd={onNodeDragEnd}
             />
@@ -337,5 +342,5 @@ export function GameScreen({
         </Text>
       </View>
     </View>
-  )
+  );
 }

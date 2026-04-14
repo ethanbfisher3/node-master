@@ -13,7 +13,6 @@ export type PersistedPlayerProgress = {
   noAdsOwned: boolean;
   purchasedStoreItemIds: string[];
   equippedThemeCosmeticId: string | null;
-  equippedBoardCosmeticId: string | null;
   completedLevelKeys: string[];
   completedLevelsCount: number;
   levelsSinceLastInterstitialAd: number;
@@ -132,7 +131,6 @@ function defaultPlayerProgress(): PersistedPlayerProgress {
     noAdsOwned: false,
     purchasedStoreItemIds: [],
     equippedThemeCosmeticId: null,
-    equippedBoardCosmeticId: null,
     completedLevelKeys: [],
     completedLevelsCount: 0,
     levelsSinceLastInterstitialAd: 0,
@@ -202,10 +200,6 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
             ? ((parsedValue as { equippedCosmeticId: string })
                 .equippedCosmeticId ?? null)
             : null,
-      equippedBoardCosmeticId:
-        typeof parsedValue.equippedBoardCosmeticId === "string"
-          ? parsedValue.equippedBoardCosmeticId
-          : null,
       completedLevelKeys: migratedCompletedLevelKeys,
       completedLevelsCount: toNonNegativeInt(
         parsedValue.completedLevelsCount,

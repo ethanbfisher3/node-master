@@ -1,17 +1,17 @@
-import React from "react"
-import { Text, TouchableOpacity, View } from "react-native"
-import { ChevronLeft, ChevronRight, Coins, Trophy } from "lucide-react-native"
+import React from "react";
+import { Text, TouchableOpacity, View } from "react-native";
+import { ChevronLeft, ChevronRight, Coins, Trophy } from "lucide-react-native";
 
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
-import { styles } from "../styles"
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
+import { styles } from "../styles";
 
 type CompleteScreenProps = {
-  level: number
-  nodeCount: number
-  theme?: AppThemePalette
-  onHome: () => void
-  onNextLevel: () => void
-}
+  level: number;
+  nodeCount: number;
+  theme?: AppThemePalette;
+  onHome: () => void;
+  onNextLevel: () => void;
+};
 
 export function CompleteScreen({
   level,
@@ -20,10 +20,10 @@ export function CompleteScreen({
   onHome,
   onNextLevel,
 }: CompleteScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
-  const baseReward = 5
-  const nodeBonus = nodeCount
-  const totalReward = baseReward + nodeBonus
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const baseReward = 5;
+  const nodeBonus = nodeCount;
+  const totalReward = baseReward + nodeBonus;
 
   return (
     <View
@@ -47,7 +47,7 @@ export function CompleteScreen({
       <Text style={[styles.completeTitle, { color: activeTheme.text }]}>
         WELL DONE!
       </Text>
-      <Text style={[styles.completeSubtitle, { color: activeTheme.mutedText }]}>
+      <Text style={[styles.completeSubtitle, { color: activeTheme.text }]}>
         Level {level} completed
       </Text>
 
@@ -55,9 +55,7 @@ export function CompleteScreen({
         style={[styles.rewardCard, { backgroundColor: activeTheme.surface }]}
       >
         <View style={styles.rewardRow}>
-          <Text
-            style={[styles.rewardLabel, { color: activeTheme.cardMutedText }]}
-          >
+          <Text style={[styles.rewardLabel, { color: activeTheme.cardText }]}>
             Base Reward
           </Text>
           <Text style={[styles.rewardValue, { color: activeTheme.cardText }]}>
@@ -65,9 +63,7 @@ export function CompleteScreen({
           </Text>
         </View>
         <View style={styles.rewardRow}>
-          <Text
-            style={[styles.rewardLabel, { color: activeTheme.cardMutedText }]}
-          >
+          <Text style={[styles.rewardLabel, { color: activeTheme.cardText }]}>
             Node Bonus
           </Text>
           <Text style={[styles.rewardValue, { color: activeTheme.cardText }]}>
@@ -125,5 +121,5 @@ export function CompleteScreen({
         </TouchableOpacity>
       </View>
     </View>
-  )
+  );
 }

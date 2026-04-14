@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Animated,
   Dimensions,
@@ -9,99 +15,97 @@ import {
   Text,
   TouchableOpacity,
   View,
-} from "react-native"
-import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native"
-import { Audio } from "expo-av"
+} from "react-native";
+import { ArrowLeft, BadgeCheck, ShoppingBag } from "lucide-react-native";
+import { Audio } from "expo-av";
 
 import {
   AppThemePalette,
   DEFAULT_APP_THEME,
-  DEFAULT_NODE_LINE_STYLE,
   ThemePack,
   THEME_PACKS,
-} from "../data/cosmetics"
-import { styles } from "../styles"
-import { Cosmetic } from "../data/cosmetics"
-import { LevelPack } from "../data/levelPacks"
-import coinPacks from "../data/coinPacks"
+} from "../data/cosmetics";
+import { styles } from "../styles";
+import { Cosmetic } from "../data/cosmetics";
+import { LevelPack } from "../data/levelPacks";
+import coinPacks from "../data/coinPacks";
 
 type SelectableLevelPack = LevelPack & {
-  owned: boolean
-}
+  owned: boolean;
+};
 
 type StoreScreenProps = {
-  coins: number
-  noAdsOwned: boolean
-  noAdsPrice: number
-  noAdsPriceLabel: string | null
-  cosmetics: Cosmetic[]
-  levelPacks: SelectableLevelPack[]
-  purchasedStoreItemIds: Set<string>
-  equippedThemeCosmeticId: string | null
-  equippedBoardCosmeticId: string | null
-  onBack: () => void
-  onBuyNoAds: () => void
-  onBuyCosmetic: (cosmetic: Cosmetic) => void
-  onBuyThemePack: (themePack: ThemePack) => void
-  onBuyLevelPack: (levelPack: SelectableLevelPack) => void
-  onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void
-  coinPackPriceLabels: Record<string, string>
-  levelPackPriceLabels: Record<string, string>
-  themePackPriceLabels: Record<string, string>
-  onApplyDefaultTheme: () => void
-  onApplyCosmetic: (cosmetic: Cosmetic) => void
-  purchaseCelebrationToken: number
-  theme?: AppThemePalette
-}
+  coins: number;
+  noAdsOwned: boolean;
+  noAdsPrice: number;
+  noAdsPriceLabel: string | null;
+  cosmetics: Cosmetic[];
+  levelPacks: SelectableLevelPack[];
+  purchasedStoreItemIds: Set<string>;
+  equippedThemeCosmeticId: string | null;
+  onBack: () => void;
+  onBuyNoAds: () => void;
+  onBuyCosmetic: (cosmetic: Cosmetic) => void;
+  onBuyThemePack: (themePack: ThemePack) => void;
+  onBuyLevelPack: (levelPack: SelectableLevelPack) => void;
+  onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void;
+  coinPackPriceLabels: Record<string, string>;
+  levelPackPriceLabels: Record<string, string>;
+  themePackPriceLabels: Record<string, string>;
+  onApplyDefaultTheme: () => void;
+  onApplyCosmetic: (cosmetic: Cosmetic) => void;
+  purchaseCelebrationToken: number;
+  theme?: AppThemePalette;
+};
 
 type ConfettiPiece = {
-  id: string
-  left: number
-  top: number
-  size: number
-  drift: number
-  rise: number
-  rotation: number
-  delay: number
-  color: string
-  value: Animated.Value
-}
+  id: string;
+  left: number;
+  top: number;
+  size: number;
+  drift: number;
+  rise: number;
+  rotation: number;
+  delay: number;
+  color: string;
+  value: Animated.Value;
+};
 
 function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
-  const [pieces, setPieces] = useState<ConfettiPiece[]>([])
-  const [isVisible, setIsVisible] = useState(false)
-  const previousTriggerTokenRef = useRef<number | null>(null)
-  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [pieces, setPieces] = useState<ConfettiPiece[]>([]);
+  const [isVisible, setIsVisible] = useState(false);
+  const previousTriggerTokenRef = useRef<number | null>(null);
+  const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearHideTimeout = useCallback(() => {
     if (!hideTimeoutRef.current) {
-      return
+      return;
     }
 
-    clearTimeout(hideTimeoutRef.current)
-    hideTimeoutRef.current = null
-  }, [])
+    clearTimeout(hideTimeoutRef.current);
+    hideTimeoutRef.current = null;
+  }, []);
 
   useEffect(() => {
     return () => {
-      clearHideTimeout()
-    }
-  }, [clearHideTimeout])
+      clearHideTimeout();
+    };
+  }, [clearHideTimeout]);
 
   useEffect(() => {
     if (previousTriggerTokenRef.current === null) {
-      previousTriggerTokenRef.current = triggerToken
-      return
+      previousTriggerTokenRef.current = triggerToken;
+      return;
     }
 
     if (previousTriggerTokenRef.current === triggerToken) {
-      return
+      return;
     }
 
-    previousTriggerTokenRef.current = triggerToken
-    clearHideTimeout()
+    previousTriggerTokenRef.current = triggerToken;
+    clearHideTimeout();
 
-    const screenWidth = Dimensions.get("window").width
+    const screenWidth = Dimensions.get("window").width;
     const palette = [
       "#f97316",
       "#facc15",
@@ -109,11 +113,11 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
       "#38bdf8",
       "#fb7185",
       "#a78bfa",
-    ]
+    ];
 
     const nextPieces = Array.from({ length: 14 }, (_, index) => {
-      const value = new Animated.Value(0)
-      const horizontalStart = screenWidth * (0.32 + Math.random() * 0.36)
+      const value = new Animated.Value(0);
+      const horizontalStart = screenWidth * (0.32 + Math.random() * 0.36);
 
       return {
         id: `${triggerToken}-${index}`,
@@ -126,11 +130,11 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
         delay: index * 28,
         color: palette[index % palette.length],
         value,
-      }
-    })
+      };
+    });
 
-    setPieces(nextPieces)
-    setIsVisible(true)
+    setPieces(nextPieces);
+    setIsVisible(true);
 
     Animated.parallel(
       nextPieces.map((piece) =>
@@ -142,15 +146,15 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
           useNativeDriver: true,
         }),
       ),
-    ).start()
+    ).start();
 
     hideTimeoutRef.current = setTimeout(() => {
-      setIsVisible(false)
-    }, 1300)
-  }, [clearHideTimeout, triggerToken])
+      setIsVisible(false);
+    }, 1300);
+  }, [clearHideTimeout, triggerToken]);
 
   if (!isVisible) {
-    return null
+    return null;
   }
 
   return (
@@ -167,23 +171,23 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
         const translateX = piece.value.interpolate({
           inputRange: [0, 1],
           outputRange: [0, piece.drift],
-        })
+        });
         const translateY = piece.value.interpolate({
           inputRange: [0, 1],
           outputRange: [0, -piece.rise],
-        })
+        });
         const rotate = piece.value.interpolate({
           inputRange: [0, 1],
           outputRange: ["0deg", `${piece.rotation}deg`],
-        })
+        });
         const opacity = piece.value.interpolate({
           inputRange: [0, 0.15, 0.75, 1],
           outputRange: [0, 1, 1, 0],
-        })
+        });
         const scale = piece.value.interpolate({
           inputRange: [0, 1],
           outputRange: [0.65, 1],
-        })
+        });
 
         return (
           <Animated.View
@@ -205,10 +209,10 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
               ],
             }}
           />
-        )
+        );
       })}
     </View>
-  )
+  );
 }
 
 export function StoreScreen({
@@ -220,7 +224,6 @@ export function StoreScreen({
   levelPacks,
   purchasedStoreItemIds,
   equippedThemeCosmeticId,
-  equippedBoardCosmeticId,
   onBack,
   onBuyNoAds,
   onBuyThemePack,
@@ -235,24 +238,24 @@ export function StoreScreen({
   purchaseCelebrationToken,
   theme,
 }: StoreScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
   const [expandedThemePackId, setExpandedThemePackId] = useState<
     ThemePack["id"] | null
-  >(null)
-  const themeChangeSoundRef = useRef<Audio.Sound | null>(null)
-  const isThemeChangeSoundLoadingRef = useRef(false)
+  >(null);
+  const themeChangeSoundRef = useRef<Audio.Sound | null>(null);
+  const isThemeChangeSoundLoadingRef = useRef(false);
   const previousEquippedThemeIdRef = useRef<string | null | undefined>(
     undefined,
-  )
+  );
   const stopThemeChangeSoundTimeoutRef = useRef<ReturnType<
     typeof setTimeout
-  > | null>(null)
-  const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : []
-  const levelPackItems = Array.isArray(levelPacks) ? levelPacks : []
+  > | null>(null);
+  const cosmeticItems = Array.isArray(cosmetics) ? cosmetics : [];
+  const levelPackItems = Array.isArray(levelPacks) ? levelPacks : [];
   const cosmeticsById = useMemo(
     () => new Map(cosmeticItems.map((cosmetic) => [cosmetic.id, cosmetic])),
     [cosmeticItems],
-  )
+  );
   const themePacksWithCosmetics = useMemo(
     () =>
       THEME_PACKS.map((themePack) => ({
@@ -262,78 +265,93 @@ export function StoreScreen({
           .filter((entry): entry is Cosmetic => Boolean(entry)),
       })),
     [cosmeticsById],
-  )
+  );
+  const isCosmeticOwned = useCallback(
+    (cosmeticId: string) => {
+      const cosmeticItemKey = `cosmetic:${cosmeticId}`;
+      if (purchasedStoreItemIds.has(cosmeticItemKey)) {
+        return true;
+      }
+
+      return THEME_PACKS.some(
+        (themePack) =>
+          purchasedStoreItemIds.has(themePack.id) &&
+          themePack.cosmeticIds.includes(cosmeticId),
+      );
+    },
+    [purchasedStoreItemIds],
+  );
 
   const clearThemeChangeSoundStopTimeout = useCallback(() => {
     if (!stopThemeChangeSoundTimeoutRef.current) {
-      return
+      return;
     }
 
-    clearTimeout(stopThemeChangeSoundTimeoutRef.current)
-    stopThemeChangeSoundTimeoutRef.current = null
-  }, [])
+    clearTimeout(stopThemeChangeSoundTimeoutRef.current);
+    stopThemeChangeSoundTimeoutRef.current = null;
+  }, []);
 
   const playThemeChangeSnippet = useCallback(async () => {
     try {
       if (!themeChangeSoundRef.current) {
         if (isThemeChangeSoundLoadingRef.current) {
-          return
+          return;
         }
 
-        isThemeChangeSoundLoadingRef.current = true
+        isThemeChangeSoundLoadingRef.current = true;
         const { sound } = await Audio.Sound.createAsync(
           require("../sounds/theme_change.mp3"),
           {
             shouldPlay: false,
             volume: 0.3,
           },
-        )
-        themeChangeSoundRef.current = sound
+        );
+        themeChangeSoundRef.current = sound;
       }
 
-      clearThemeChangeSoundStopTimeout()
+      clearThemeChangeSoundStopTimeout();
 
-      await themeChangeSoundRef.current.setPositionAsync(0)
-      await themeChangeSoundRef.current.playAsync()
+      await themeChangeSoundRef.current.setPositionAsync(0);
+      await themeChangeSoundRef.current.playAsync();
 
       stopThemeChangeSoundTimeoutRef.current = setTimeout(() => {
-        const activeSound = themeChangeSoundRef.current
+        const activeSound = themeChangeSoundRef.current;
         if (!activeSound) {
-          return
+          return;
         }
 
-        void activeSound.pauseAsync()
-        void activeSound.setPositionAsync(0)
-      }, 500)
+        void activeSound.pauseAsync();
+        void activeSound.setPositionAsync(0);
+      }, 500);
     } catch {
       // Ignore playback errors so theme application remains responsive.
     } finally {
-      isThemeChangeSoundLoadingRef.current = false
+      isThemeChangeSoundLoadingRef.current = false;
     }
-  }, [clearThemeChangeSoundStopTimeout])
+  }, [clearThemeChangeSoundStopTimeout]);
 
   useEffect(() => {
-    const previousThemeId = previousEquippedThemeIdRef.current
+    const previousThemeId = previousEquippedThemeIdRef.current;
     if (previousThemeId === undefined) {
-      previousEquippedThemeIdRef.current = equippedThemeCosmeticId
-      return
+      previousEquippedThemeIdRef.current = equippedThemeCosmeticId;
+      return;
     }
 
     if (previousThemeId === equippedThemeCosmeticId) {
-      return
+      return;
     }
 
-    previousEquippedThemeIdRef.current = equippedThemeCosmeticId
-    void playThemeChangeSnippet()
-  }, [equippedThemeCosmeticId, playThemeChangeSnippet])
+    previousEquippedThemeIdRef.current = equippedThemeCosmeticId;
+    void playThemeChangeSnippet();
+  }, [equippedThemeCosmeticId, playThemeChangeSnippet]);
 
   useEffect(() => {
     return () => {
-      clearThemeChangeSoundStopTimeout()
-      void themeChangeSoundRef.current?.unloadAsync()
-      themeChangeSoundRef.current = null
-    }
-  }, [clearThemeChangeSoundStopTimeout])
+      clearThemeChangeSoundStopTimeout();
+      void themeChangeSoundRef.current?.unloadAsync();
+      themeChangeSoundRef.current = null;
+    };
+  }, [clearThemeChangeSoundStopTimeout]);
 
   return (
     <View
@@ -411,7 +429,7 @@ export function StoreScreen({
           Theme Packs
         </Text>
         <Text style={[styles.modeCardBody, { color: activeTheme.mutedText }]}>
-          Choose a pack to unlock and browse included themes and node styles.
+          Choose a pack to unlock and browse included themes.
         </Text>
         <View
           style={[
@@ -491,10 +509,10 @@ export function StoreScreen({
           </TouchableOpacity>
         </View>
         {themePacksWithCosmetics.map((themePack) => {
-          const isPackOwned = purchasedStoreItemIds.has(themePack.id)
-          const isExpanded = expandedThemePackId === themePack.id
+          const isPackOwned = purchasedStoreItemIds.has(themePack.id);
+          const isExpanded = expandedThemePackId === themePack.id;
           const packPriceLabel =
-            themePackPriceLabels[themePack.id] ?? "Loading..."
+            themePackPriceLabels[themePack.id] ?? "Loading...";
 
           return (
             <View
@@ -572,30 +590,14 @@ export function StoreScreen({
               {isExpanded && (
                 <View style={{ marginTop: 12, gap: 8 }}>
                   {themePack.cosmetics.map((cosmetic) => {
-                    const cosmeticItemKey = `cosmetic:${cosmetic.id}`
-                    const isOwned = purchasedStoreItemIds.has(cosmeticItemKey)
-                    const isEquipped =
-                      (cosmetic.category === "app-theme" &&
-                        equippedThemeCosmeticId === cosmetic.id) ||
-                      (cosmetic.category === "node-line-style" &&
-                        equippedBoardCosmeticId === cosmetic.id)
-                    const canApply = isOwned && !isEquipped
-                    const applyLabel =
-                      cosmetic.category === "app-theme"
-                        ? isEquipped
-                          ? "EQUIPPED"
-                          : "USE"
-                        : isEquipped
-                          ? "APPLIED"
-                          : "APPLY"
+                    const isOwned = isCosmeticOwned(cosmetic.id);
+                    const isEquipped = equippedThemeCosmeticId === cosmetic.id;
+                    const canApply = isOwned && !isEquipped;
+                    const applyLabel = isEquipped ? "EQUIPPED" : "USE";
                     const previewTheme = {
                       ...DEFAULT_APP_THEME,
                       ...(cosmetic.theme ?? {}),
-                    }
-                    const previewNodeStyle = {
-                      ...DEFAULT_NODE_LINE_STYLE,
-                      ...(cosmetic.nodeLineStyle ?? {}),
-                    }
+                    };
 
                     return (
                       <View
@@ -622,148 +624,66 @@ export function StoreScreen({
                             { color: activeTheme.cardMutedText },
                           ]}
                         >
-                          {cosmetic.category === "app-theme"
-                            ? "Theme"
-                            : "Node & Line Style"}
+                          Theme
                         </Text>
 
-                        {cosmetic.category === "app-theme" ? (
-                          <View
-                            style={{
-                              marginTop: 6,
-                              padding: 8,
-                              borderRadius: 8,
-                              backgroundColor: previewTheme.background,
-                              borderWidth: 1,
-                              borderColor: previewTheme.surfaceAlt,
-                              gap: 6,
-                              overflow: "hidden",
-                            }}
-                          >
-                            {previewTheme.appTextureSource && (
-                              <Image
-                                source={previewTheme.appTextureSource}
-                                style={{
-                                  position: "absolute",
-                                  top: 0,
-                                  left: 0,
-                                  right: 0,
-                                  bottom: 0,
-                                }}
-                                resizeMode="cover"
-                              />
-                            )}
-                            <View
+                        <View
+                          style={{
+                            marginTop: 6,
+                            padding: 8,
+                            borderRadius: 8,
+                            backgroundColor: previewTheme.background,
+                            borderWidth: 1,
+                            borderColor: previewTheme.surfaceAlt,
+                            gap: 6,
+                            overflow: "hidden",
+                          }}
+                        >
+                          {previewTheme.appTextureSource && (
+                            <Image
+                              source={previewTheme.appTextureSource}
                               style={{
-                                height: 16,
-                                borderRadius: 6,
-                                backgroundColor: previewTheme.surfaceAlt,
+                                position: "absolute",
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
                               }}
+                              resizeMode="cover"
                             />
-                            <View
-                              style={{
-                                flexDirection: "row",
-                                alignItems: "center",
-                                gap: 6,
-                              }}
-                            >
-                              <View
-                                style={{
-                                  width: 14,
-                                  height: 14,
-                                  borderRadius: 7,
-                                  backgroundColor: previewTheme.primary,
-                                }}
-                              />
-                              <View
-                                style={{
-                                  width: 36,
-                                  height: 4,
-                                  borderRadius: 2,
-                                  backgroundColor: previewTheme.text,
-                                }}
-                              />
-                            </View>
-                          </View>
-                        ) : (
+                          )}
                           <View
                             style={{
-                              marginTop: 6,
-                              padding: 8,
-                              borderRadius: 8,
-                              backgroundColor: previewNodeStyle.nodeFill,
-                              borderWidth: 1,
-                              borderColor: previewNodeStyle.nodeBorder,
+                              height: 16,
+                              borderRadius: 6,
+                              backgroundColor: previewTheme.surfaceAlt,
+                            }}
+                          />
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
                               gap: 6,
                             }}
                           >
-                            <View
-                              style={{
-                                height: 3,
-                                borderRadius: 2,
-                                backgroundColor: previewNodeStyle.line,
-                              }}
-                            />
-                            <View
-                              style={{
-                                height: 3,
-                                width: "70%",
-                                borderRadius: 2,
-                                backgroundColor:
-                                  previewNodeStyle.intersectingLine,
-                              }}
-                            />
                             <View
                               style={{
                                 width: 14,
                                 height: 14,
                                 borderRadius: 7,
-                                backgroundColor: previewNodeStyle.nodeFill,
-                                justifyContent: "center",
-                                alignItems: "center",
-                                overflow: "hidden",
+                                backgroundColor: previewTheme.primary,
                               }}
-                            >
-                              {previewNodeStyle.nodeTexture === "wood" ? (
-                                <Image
-                                  source={require("../images/wood_texture.jpg")}
-                                  style={{
-                                    position: "absolute",
-                                    width: "110%",
-                                    height: "110%",
-                                    top: "-5%",
-                                    left: "-10%",
-                                    transform: [{ scale: 0.9 }],
-                                  }}
-                                  resizeMode="cover"
-                                />
-                              ) : (
-                                <>
-                                  <View
-                                    style={{
-                                      position: "absolute",
-                                      top: 0,
-                                      left: 0,
-                                      right: 0,
-                                      bottom: 0,
-                                      borderWidth: 2,
-                                      borderRadius: 7,
-                                      borderColor: previewNodeStyle.nodeBorder,
-                                    }}
-                                  />
-                                  <View
-                                    style={{
-                                      width: 4,
-                                      height: 4,
-                                      borderRadius: 2,
-                                      backgroundColor: previewNodeStyle.nodeDot,
-                                    }}
-                                  />
-                                </>
-                              )}
-                            </View>
+                            />
+                            <View
+                              style={{
+                                width: 36,
+                                height: 4,
+                                borderRadius: 2,
+                                backgroundColor: previewTheme.text,
+                              }}
+                            />
                           </View>
-                        )}
+                        </View>
 
                         {isOwned && (
                           <TouchableOpacity
@@ -796,33 +716,33 @@ export function StoreScreen({
                           </TouchableOpacity>
                         )}
                       </View>
-                    )
+                    );
                   })}
                 </View>
               )}
             </View>
-          )
+          );
         })}
 
         <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
           Packs
         </Text>
         {levelPackItems.map((levelPack) => {
-          if (levelPack.defaultOwned) return null
-          const coinPrice = levelPack.price ?? 0
+          if (levelPack.defaultOwned) return null;
+          const coinPrice = levelPack.price ?? 0;
 
           const isOwned =
             levelPack.owned ||
             levelPack.defaultOwned ||
             (levelPack.storeItemId
               ? purchasedStoreItemIds.has(levelPack.storeItemId)
-              : false)
+              : false);
           const cannotAffordCoins =
-            !isOwned && levelPack.priceType === "coins" && coins < coinPrice
+            !isOwned && levelPack.priceType === "coins" && coins < coinPrice;
           const levelPackPriceLabel =
             levelPack.priceType === "real-money"
               ? (levelPackPriceLabels[levelPack.id] ?? "Loading...")
-              : `${coinPrice} coins`
+              : `${coinPrice} coins`;
 
           return (
             <View
@@ -877,7 +797,7 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          )
+          );
         })}
 
         <View
@@ -894,7 +814,7 @@ export function StoreScreen({
         </View>
         {coinPacks.map((coinPack) => {
           const localizedPrice =
-            coinPackPriceLabels[coinPack.id] ?? "Loading..."
+            coinPackPriceLabels[coinPack.id] ?? "Loading...";
 
           return (
             <View
@@ -932,10 +852,10 @@ export function StoreScreen({
                 </Text>
               </TouchableOpacity>
             </View>
-          )
+          );
         })}
       </ScrollView>
       <PurchaseCelebrationBurst triggerToken={purchaseCelebrationToken} />
     </View>
-  )
+  );
 }
