@@ -16,6 +16,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 32,
+    paddingTop: 36,
   },
   logoContainer: {
     width: 120,
@@ -117,11 +118,12 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
   levelsContainer: {
+    paddingTop: 36,
     flex: 1,
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "center",
     padding: 24,
     gap: 16,
   },
@@ -410,6 +412,7 @@ const styles = StyleSheet.create({
   },
   gameContainer: {
     flex: 1,
+    paddingTop: 36,
   },
   gameHeader: {
     flexDirection: "row",
@@ -419,8 +422,16 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    paddingTop: 36,
+    // paddingTop: 36,
     backgroundColor: "white",
+  },
+  woodTextureBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    opacity: 0.95,
   },
   gameHeaderLeft: {
     flexDirection: "row",
@@ -470,7 +481,7 @@ const styles = StyleSheet.create({
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     alignSelf: "center",
-    marginBottom: 16,
+    marginBottom: 12,
     borderRadius: 32,
     borderWidth: 2,
     overflow: "hidden",
@@ -622,7 +633,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     color: "white",
-    fontSize: 20,
+    fontSize: 16,
     fontWeight: "800",
   },
   bannerAdContainer: {

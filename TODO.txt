@@ -1,7 +1,8 @@
 Notifications
 Buy different styles for the nodes (animals like dogs or cats, other pictures)
 Animation for when the user buys coins or ad removal
-Add a texture pack (wood texture, silver, bronze, gold textures), allow the user to preview node styles and themes
+Add a texture pack (wood texture, silver, bronze, gold textures)
+allow the user to preview node styles and themes
 
 
 Play Store stuff:

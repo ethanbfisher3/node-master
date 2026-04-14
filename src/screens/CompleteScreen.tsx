@@ -101,7 +101,7 @@ export function CompleteScreen({
           ]}
           onPress={onHome}
         >
-          <ChevronLeft size={24} color={activeTheme.text} />
+          <ChevronLeft size={20} color={activeTheme.text} />
           <Text style={[styles.nextButtonText, { color: activeTheme.text }]}>
             HOME
           </Text>
@@ -121,7 +121,7 @@ export function CompleteScreen({
           >
             NEXT LEVEL
           </Text>
-          <ChevronRight size={24} color={activeTheme.buttonText} />
+          <ChevronRight size={20} color={activeTheme.buttonText} />
         </TouchableOpacity>
       </View>
     </View>
