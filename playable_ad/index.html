@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Node Master Playable</title>
+    <style>
+      :root {
+        --bg: #f8fafc;
+        --surface: #ffffff;
+        --surface-alt: #dbeafe;
+        --primary: #2563eb;
+        --text: #0f172a;
+        --muted: #64748b;
+      }
+      * {
+        box-sizing: border-box;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: var(--bg);
+        font-family:
+          system-ui,
+          -apple-system,
+          Segoe UI,
+          Roboto,
+          sans-serif;
+        color: var(--text);
+      }
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+      }
+      #app {
+        position: relative;
+        width: min(360px, 100vw - 20px);
+        background: var(--surface);
+        border: 2px solid var(--surface-alt);
+        border-radius: 16px;
+        padding: 10px;
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+      }
+      #app.win-pop {
+        animation: winPop 420ms ease;
+      }
+      #intro {
+        position: absolute;
+        left: 12px;
+        right: 12px;
+        top: 44px;
+        z-index: 10;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        transition: opacity 180ms ease;
+      }
+      #intro.hidden {
+        opacity: 0;
+      }
+      #introText {
+        background: var(--primary);
+        color: #fff;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-weight: 900;
+        font-size: 20px;
+        letter-spacing: 0.05em;
+        line-height: 1;
+        text-transform: uppercase;
+        text-shadow: 0 1px 0 rgba(15, 23, 42, 0.25);
+        box-shadow:
+          0 12px 24px rgba(37, 99, 235, 0.42),
+          0 0 0 3px rgba(255, 255, 255, 0.55) inset;
+        animation: introPop 700ms cubic-bezier(0.34, 1.56, 0.64, 1) infinite
+          alternate;
+      }
+      #introArrows {
+        width: 100%;
+        margin-top: 8px;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        gap: 80px;
+      }
+      .introArrow {
+        position: relative;
+        width: 5px;
+        height: 66px;
+        background: var(--primary);
+        border-radius: 999px;
+        box-shadow: 0 8px 14px rgba(37, 99, 235, 0.28);
+        animation: introBob 700ms cubic-bezier(0.34, 1.56, 0.64, 1) infinite
+          alternate;
+      }
+      .introArrow::after {
+        content: "";
+        position: absolute;
+        left: 50%;
+        bottom: -11px;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 10px solid transparent;
+        border-right: 10px solid transparent;
+        border-top: 16px solid var(--primary);
+      }
+      .introArrow.left {
+        transform: rotate(18deg);
+      }
+      .introArrow.right {
+        transform: rotate(-18deg);
+      }
+      .introArrow.center {
+        height: 74px;
+      }
+      .introArrow.a1 {
+        animation-delay: 0ms;
+      }
+      .introArrow.a2 {
+        animation-delay: 120ms;
+      }
+      .introArrow.a3 {
+        animation-delay: 240ms;
+      }
+      @keyframes introPop {
+        from {
+          transform: scale(0.94) rotate(-1.2deg);
+          filter: brightness(0.98);
+        }
+        to {
+          transform: scale(1.09) rotate(1.2deg);
+          filter: brightness(1.08);
+        }
+      }
+      @keyframes introBob {
+        from {
+          transform: translateY(-2px);
+        }
+        to {
+          transform: translateY(12px);
+        }
+      }
+      @keyframes winPop {
+        0% {
+          transform: scale(1);
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+        45% {
+          transform: scale(1.015);
+          box-shadow: 0 12px 28px rgba(37, 99, 235, 0.28);
+        }
+        100% {
+          transform: scale(1);
+          box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+        }
+      }
+      #top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 8px;
+      }
+      #title {
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        font-size: 13px;
+      }
+      #sub {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      canvas {
+        width: 100%;
+        aspect-ratio: 7/10;
+        display: block;
+        background: var(--surface-alt);
+        border-radius: 12px;
+      }
+      #bar {
+        margin-top: 8px;
+        display: flex;
+        gap: 8px;
+      }
+      button {
+        flex: 1;
+        border: 0;
+        background: var(--primary);
+        color: #fff;
+        padding: 10px 8px;
+        border-radius: 10px;
+        font-weight: 700;
+        font-size: 12px;
+      }
+      button:disabled {
+        opacity: 0.45;
+      }
+      #install {
+        background: #16a34a;
+      }
+      #cta {
+        margin-top: 6px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="intro" aria-hidden="true">
+        <div id="introText">UNTANGLE THE NODES!</div>
+        <div id="introArrows">
+          <div class="introArrow left a1"></div>
+          <div class="introArrow center a2"></div>
+          <div class="introArrow center a2"></div>
+          <div class="introArrow right a3"></div>
+        </div>
+      </div>
+      <div id="top">
+        <div id="title">NODE MASTER</div>
+        <div id="sub" aria-live="polite">Level 1 / 5</div>
+      </div>
+      <canvas id="c" width="336" height="480"></canvas>
+      <div id="bar">
+        <button id="restart">Restart</button>
+        <button id="next" disabled>Next</button>
+        <button id="install">Install</button>
+      </div>
+      <div id="cta">Drag nodes to untangle. Complete all 5 levels.</div>
+    </div>
+    <script>
+      (() => {
+        const W = 336,
+          H = 480,
+          R = 18,
+          LINE = 4;
+        const canvas = document.getElementById("c"),
+          ctx = canvas.getContext("2d");
+        const app = document.getElementById("app"),
+          intro = document.getElementById("intro");
+        const sub = document.getElementById("sub"),
+          nextBtn = document.getElementById("next"),
+          restartBtn = document.getElementById("restart"),
+          installBtn = document.getElementById("install"),
+          cta = document.getElementById("cta");
+
+        const APP_STORE_URL = "https://your-app-link.com";
+
+        function exitAd() {
+          try {
+            if (window.ExitApi && typeof window.ExitApi.exit === "function") {
+              window.ExitApi.exit();
+              return;
+            }
+          } catch {}
+
+          try {
+            if (window.mraid && typeof window.mraid.open === "function") {
+              window.mraid.open(APP_STORE_URL);
+              return;
+            }
+          } catch {}
+
+          window.open(APP_STORE_URL, "_blank");
+        }
+
+        const levels = [
+          { n: 4, s: [0, 2, 1, 3] },
+          { n: 5, s: [0, 2, 4, 1, 3] },
+          { n: 6, s: [0, 3, 1, 4, 2, 5] },
+          { n: 6, s: [0, 2, 4, 1, 5, 3] },
+          { n: 7, s: [0, 3, 6, 2, 5, 1, 4] },
+        ];
+        let li = 0,
+          nodes = [],
+          links = [],
+          startNodes = [],
+          drag = -1,
+          won = false,
+          pointer = null;
+        let fxPieces = [],
+          fxTimer = 0,
+          fxRaf = 0;
+
+        let introDismissed = false;
+
+        function dismissIntro() {
+          if (introDismissed) return;
+          introDismissed = true;
+          intro.classList.add("hidden");
+          setTimeout(() => {
+            intro.remove();
+          }, 220);
+        }
+
+        function circlePoints(n) {
+          const cx = W / 2,
+            cy = H / 2,
+            rad = Math.min(W, H) * 0.34,
+            p = [];
+          for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2 - Math.PI / 2;
+            p.push({ x: cx + Math.cos(a) * rad, y: cy + Math.sin(a) * rad });
+          }
+          return p;
+        }
+        function build(n) {
+          const l = [];
+          for (let i = 0; i < n; i++) l.push([i, (i + 1) % n]);
+          for (let i = 2; i <= n - 2; i++) l.push([0, i]);
+          return l;
+        }
+        function makeLevel(i) {
+          if (fxRaf) cancelAnimationFrame(fxRaf);
+          fxRaf = 0;
+          fxPieces = [];
+          const lvl = levels[i],
+            sol = circlePoints(lvl.n),
+            scr = lvl.s;
+          nodes = scr.map((solIdx, id) => ({
+            id,
+            x: sol[solIdx].x,
+            y: sol[solIdx].y,
+          }));
+          links = build(lvl.n);
+          startNodes = nodes.map((v) => ({ x: v.x, y: v.y }));
+          won = false;
+          nextBtn.disabled = true;
+          sub.textContent = `Level ${i + 1} / ${levels.length}`;
+          cta.textContent = `Drag nodes to untangle. Complete all ${levels.length} levels.`;
+        }
+
+        function orient(a, b, c) {
+          const v = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y);
+          return v === 0 ? 0 : v > 0 ? 1 : 2;
+        }
+        function inter(a, b, c, d) {
+          if (a === c || a === d || b === c || b === d) return false;
+          const o1 = orient(a, b, c),
+            o2 = orient(a, b, d),
+            o3 = orient(c, d, a),
+            o4 = orient(c, d, b);
+          return o1 !== o2 && o3 !== o4;
+        }
+        function countIntersections() {
+          let k = 0;
+          for (let i = 0; i < links.length; i++)
+            for (let j = i + 1; j < links.length; j++) {
+              const [a1, b1] = links[i],
+                [a2, b2] = links[j];
+              if (inter(nodes[a1], nodes[b1], nodes[a2], nodes[b2])) k++;
+            }
+          return k;
+        }
+        function draw() {
+          ctx.clearRect(0, 0, W, H);
+          const crossed = new Set();
+          for (let i = 0; i < links.length; i++)
+            for (let j = i + 1; j < links.length; j++) {
+              const A = links[i],
+                B = links[j];
+              if (inter(nodes[A[0]], nodes[A[1]], nodes[B[0]], nodes[B[1]])) {
+                crossed.add(i);
+                crossed.add(j);
+              }
+            }
+
+          for (let i = 0; i < links.length; i++) {
+            const [a, b] = links[i],
+              n1 = nodes[a],
+              n2 = nodes[b];
+            ctx.strokeStyle = crossed.has(i) ? "#ef4444" : "#2563eb";
+            ctx.lineWidth = crossed.has(i) ? LINE + 2 : LINE;
+            ctx.lineCap = "round";
+            ctx.beginPath();
+            ctx.moveTo(n1.x, n1.y);
+            ctx.lineTo(n2.x, n2.y);
+            ctx.stroke();
+          }
+          for (const n of nodes) {
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, R, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#2563eb";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+            ctx.fillStyle = "#2563eb";
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, 4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+
+          if (fxPieces.length) {
+            for (const p of fxPieces) {
+              p.x += p.vx;
+              p.y += p.vy;
+              p.vy += 0.16;
+              p.life -= 1;
+              if (p.life <= 0) continue;
+              ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+              ctx.fillStyle = p.c;
+              ctx.fillRect(p.x, p.y, p.s, p.s);
+            }
+            ctx.globalAlpha = 1;
+            fxPieces = fxPieces.filter((p) => p.life > 0);
+          }
+        }
+
+        function spawnWinFx() {
+          app.classList.remove("win-pop");
+          void app.offsetWidth;
+          app.classList.add("win-pop");
+          setTimeout(() => app.classList.remove("win-pop"), 430);
+
+          const colors = [
+            "#2563eb",
+            "#22c55e",
+            "#f59e0b",
+            "#ef4444",
+            "#ffffff",
+          ];
+          fxPieces = [];
+          for (const n of nodes) {
+            for (let i = 0; i < 8; i++) {
+              const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.5;
+              const speed = 1.7 + Math.random() * 2.1;
+              fxPieces.push({
+                x: n.x,
+                y: n.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1.8,
+                s: 4 + Math.random() * 2,
+                c: colors[(i + n.id) % colors.length],
+                life: 22 + Math.floor(Math.random() * 12),
+                maxLife: 34,
+              });
+            }
+          }
+
+          fxTimer = 36;
+          if (fxRaf) cancelAnimationFrame(fxRaf);
+          const tick = () => {
+            draw();
+            fxTimer -= 1;
+            if (fxTimer > 0 && fxPieces.length) {
+              fxRaf = requestAnimationFrame(tick);
+            } else {
+              fxRaf = 0;
+              fxPieces = [];
+              draw();
+            }
+          };
+          fxRaf = requestAnimationFrame(tick);
+        }
+        function toPos(e) {
+          const r = canvas.getBoundingClientRect();
+          return {
+            x: ((e.clientX - r.left) * W) / r.width,
+            y: ((e.clientY - r.top) * H) / r.height,
+          };
+        }
+        function tryWin() {
+          if (won || countIntersections() > 0) return;
+          won = true;
+          nextBtn.disabled = false;
+          spawnWinFx();
+          if (li === levels.length - 1) {
+            cta.textContent =
+              "Solved. Tap Replay, then install the full app from the ad button.";
+            nextBtn.textContent = "Replay";
+          } else {
+            cta.textContent = "Level cleared. Tap Next.";
+            nextBtn.textContent = "Next";
+          }
+        }
+
+        canvas.addEventListener("pointerdown", (e) => {
+          dismissIntro();
+          pointer = e.pointerId;
+          canvas.setPointerCapture(pointer);
+          const p = toPos(e);
+          drag = -1;
+          for (let i = nodes.length - 1; i >= 0; i--) {
+            const n = nodes[i],
+              dx = p.x - n.x,
+              dy = p.y - n.y;
+            if (dx * dx + dy * dy <= R * R * 2.2) {
+              drag = i;
+              break;
+            }
+          }
+        });
+        canvas.addEventListener("pointermove", (e) => {
+          if (drag < 0 || e.pointerId !== pointer) return;
+          const p = toPos(e);
+          nodes[drag].x = Math.max(R, Math.min(W - R, p.x));
+          nodes[drag].y = Math.max(R, Math.min(H - R, p.y));
+          draw();
+          tryWin();
+        });
+        canvas.addEventListener("pointerup", () => {
+          drag = -1;
+          pointer = null;
+        });
+        canvas.addEventListener("pointercancel", () => {
+          drag = -1;
+          pointer = null;
+        });
+        app.addEventListener("pointerdown", dismissIntro, { once: true });
+
+        restartBtn.onclick = () => {
+          if (fxRaf) cancelAnimationFrame(fxRaf);
+          fxRaf = 0;
+          fxPieces = [];
+          nodes = nodes.map((n, i) => ({
+            id: n.id,
+            x: startNodes[i].x,
+            y: startNodes[i].y,
+          }));
+          won = false;
+          nextBtn.disabled = true;
+          cta.textContent = `Drag nodes to untangle. Complete all ${levels.length} levels.`;
+          draw();
+        };
+        nextBtn.onclick = () => {
+          if (li === levels.length - 1) {
+            exitAd();
+            return;
+          }
+          li++;
+          makeLevel(li);
+          draw();
+        };
+        installBtn.onclick = exitAd;
+
+        makeLevel(0);
+        draw();
+      })();
+    </script>
+  </body>
+</html>
