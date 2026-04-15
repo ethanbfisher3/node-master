@@ -66,6 +66,15 @@ const LEVEL_PACK_SEEDS: LevelPackSeed[] = [
     priceType: "coins",
   },
   {
+    id: "reverse-1",
+    name: "Reverse Pack",
+    description: "Start solved, then cross every line to finish.",
+    defaultOwned: true,
+    storeItemId: null,
+    price: 0,
+    priceType: "coins",
+  },
+  {
     id: "advanced-1",
     name: "Advanced Pack I",
     description: "Premium extra pack available to purchase in the store.",

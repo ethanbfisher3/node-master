@@ -21,5 +21,6 @@ export const MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS = 3;
 export const MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS = 3 * 60 * 1000;
 
 export const DEFAULT_CLASSIC_PACK_ID = "starter-1";
+export const REVERSE_LEVEL_PACK_ID = "reverse-1";
 export const MIN_TIME_TRIAL_INTERSECTIONS = 2;
 export const MAX_TIME_TRIAL_GENERATION_ATTEMPTS = 24;

@@ -56,6 +56,7 @@ import {
   NO_ADS_PRICE,
   NO_ADS_REVENUECAT_ID,
   PLAYER_PROGRESS_STORAGE_KEY,
+  REVERSE_LEVEL_PACK_ID,
   COMPLETED_LEVELS_STORAGE_KEY,
   POPUP_AD_DURATION_SECONDS,
   SOLVED_HOLD_DURATION_MS,
@@ -391,6 +392,8 @@ export default function App() {
   );
 
   const activeClassicPackId = selectedLevelPack?.id ?? DEFAULT_CLASSIC_PACK_ID;
+  const isReverseClassicPackActive =
+    playMode === "classic" && activeClassicPackId === REVERSE_LEVEL_PACK_ID;
 
   const completedClassicLevelIds = useMemo(
     () =>
@@ -957,7 +960,11 @@ export default function App() {
         return;
       }
 
-      if (intersections.size > 0) {
+      const isWinConditionMet = isReverseClassicPackActive
+        ? intersections.size === currentLinks.length
+        : intersections.size === 0;
+
+      if (!isWinConditionMet) {
         clearCompletionHold();
         if (isLevelComplete) {
           setIsLevelComplete(false);
@@ -972,7 +979,12 @@ export default function App() {
         }, SOLVED_HOLD_DURATION_MS);
       }
     },
-    [clearCompletionHold, handleWin, isLevelComplete],
+    [
+      clearCompletionHold,
+      handleWin,
+      isLevelComplete,
+      isReverseClassicPackActive,
+    ],
   );
 
   useEffect(() => {
@@ -1462,6 +1474,7 @@ export default function App() {
               ? timeTrialState.timeLeftSeconds
               : undefined
           }
+          reverseObjective={isReverseClassicPackActive}
           noAdsOwned={noAdsOwned}
           onBackHome={withMenuClickSound(() => setView("home"))}
           onOpenLevels={withMenuClickSound(() => {

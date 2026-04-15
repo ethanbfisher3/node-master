@@ -14,7 +14,7 @@ import { Node } from "../utils/gameLogic";
 export type NodeVisualStyle = {
   nodeFill: string;
   nodeBorder: string;
-  nodeDot: string;
+  nodeDot?: string;
   textureSource?: number;
 };
 import {
@@ -111,7 +111,7 @@ export function DraggableNode({
             {
               backgroundColor: activeNodeStyle.nodeFill,
               borderColor: activeNodeStyle.nodeBorder,
-              borderWidth: activeNodeStyle.textureSource ? 0 : undefined,
+              borderWidth: 2,
               overflow: "hidden",
             },
           ]}
@@ -134,7 +134,7 @@ export function DraggableNode({
             <View
               style={[
                 styles.nodeDot,
-                {
+                activeNodeStyle.nodeDot && {
                   backgroundColor: activeNodeStyle.nodeDot,
                 },
               ]}

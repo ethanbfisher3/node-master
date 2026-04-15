@@ -176,6 +176,7 @@ type GameScreenProps = {
   intersectingLinks: Set<string>;
   isLevelComplete: boolean;
   trialTimeLeftSeconds?: number;
+  reverseObjective?: boolean;
   noAdsOwned: boolean;
   theme?: AppThemePalette;
   onBackHome: () => void;
@@ -193,6 +194,7 @@ export function GameScreen({
   intersectingLinks,
   isLevelComplete,
   trialTimeLeftSeconds,
+  reverseObjective = false,
   noAdsOwned,
   theme,
   onBackHome,
@@ -205,7 +207,7 @@ export function GameScreen({
   const activeNodeStyle = useMemo<NodeVisualStyle>(
     () => ({
       nodeFill: activeTheme.surface,
-      nodeBorder: activeTheme.text,
+      nodeBorder: activeTheme.primary,
       nodeDot: activeTheme.primary,
       textureSource: activeTheme.appTextureSource,
     }),
@@ -291,6 +293,13 @@ export function GameScreen({
             const n1 = nodes.find((node) => node.id === link.node1Id)!;
             const n2 = nodes.find((node) => node.id === link.node2Id)!;
             const isIntersecting = intersectingLinks.has(link.id);
+            const strokeColor = reverseObjective
+              ? isIntersecting
+                ? activeTheme.primary
+                : "#ef4444"
+              : isIntersecting
+                ? "#ef4444"
+                : activeTheme.primary;
 
             return (
               <Line
@@ -299,7 +308,7 @@ export function GameScreen({
                 y1={n1.y}
                 x2={n2.x}
                 y2={n2.y}
-                stroke={isIntersecting ? "#ef4444" : activeTheme.primary}
+                stroke={strokeColor}
                 strokeWidth={isIntersecting ? 6 : 4}
                 strokeLinecap="round"
               />
@@ -338,7 +347,9 @@ export function GameScreen({
           </Text>
         )}
         <Text style={[styles.hintText, { color: activeTheme.mutedText }]}>
-          Drag nodes to untangle. Green links are clear!
+          {reverseObjective
+            ? "Drag nodes to cross every line. Red links still need a crossing."
+            : "Drag nodes to untangle. Green links are clear!"}
         </Text>
       </View>
     </View>
