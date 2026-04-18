@@ -1,4 +1,4 @@
 <resources>
-  <string name="app_name">Node Master</string>
-  <string translatable="false"  name="game_services_project_id">1077290211744</string>
+  <string name="app_name">Uncrossed</string>
+  <string name="expo_system_ui_user_interface_style" translatable="false">light</string>
 </resources>

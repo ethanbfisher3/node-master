@@ -5,6 +5,14 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-9592701510571371~6592931335"
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },

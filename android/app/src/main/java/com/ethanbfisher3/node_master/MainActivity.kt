@@ -8,8 +8,6 @@ import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
-import com.google.android.gms.games.PlayGamesSdk
-
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
@@ -19,22 +17,6 @@ class MainActivity : ReactActivity() {
     // This is required for expo-splash-screen.
     setTheme(R.style.AppTheme);
     super.onCreate(null)
-    PlayGamesSdk.initialize(this)
-
-    GamesSignInClient gamesSignInClient = PlayGames.getGamesSignInClient(getActivity());
-
-    gamesSignInClient.isAuthenticated().addOnCompleteListener(isAuthenticatedTask -> {
-      boolean isAuthenticated =
-        (isAuthenticatedTask.isSuccessful() &&
-        isAuthenticatedTask.getResult().isAuthenticated());
-
-      if (isAuthenticated) {
-        // Continue with Play Games Services
-      } else {
-        // Show a sign-in button to ask players to authenticate. Clicking it should
-        // call GamesSignInClient.signIn().
-      }
-    });
   }
 
   /**
