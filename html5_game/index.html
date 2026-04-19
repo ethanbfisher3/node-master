@@ -1,0 +1,2200 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"
+    />
+    <title>Uncrossed Full Game</title>
+    <style>
+      :root {
+        --bg-a: #f2f4f8;
+        --bg-b: #d8e4ff;
+        --panel: rgba(255, 255, 255, 0.78);
+        --panel-border: rgba(30, 58, 138, 0.16);
+        --ink: #0f172a;
+        --muted: #475569;
+        --line-safe: #2563eb;
+        --line-crossed: #ef4444;
+        --accent: #1d4ed8;
+        --accent-2: #0ea5e9;
+        --success: #16a34a;
+      }
+
+      * {
+        box-sizing: border-box;
+        touch-action: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        color: var(--ink);
+        font-family: "Trebuchet MS", "Segoe UI", Tahoma, sans-serif;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px;
+        background:
+          radial-gradient(
+            circle at 20% 25%,
+            rgba(29, 78, 216, 0.15),
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at 78% 80%,
+            rgba(14, 165, 233, 0.18),
+            transparent 38%
+          ),
+          linear-gradient(140deg, var(--bg-a), var(--bg-b));
+      }
+
+      #app {
+        position: relative;
+        width: min(980px, 100vw - 18px);
+        border-radius: 18px;
+        border: 1px solid var(--panel-border);
+        background: var(--panel);
+        backdrop-filter: blur(8px);
+        box-shadow:
+          0 12px 30px rgba(15, 23, 42, 0.15),
+          0 2px 0 rgba(255, 255, 255, 0.6) inset;
+        overflow: hidden;
+      }
+
+      #app.win-pop {
+        animation: winPop 420ms ease;
+      }
+
+      @keyframes winPop {
+        0% {
+          transform: scale(1);
+        }
+        45% {
+          transform: scale(1.014);
+        }
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      #layout {
+        display: grid;
+        grid-template-columns: minmax(250px, 300px) 1fr;
+        gap: 0;
+      }
+
+      #top {
+        padding: 14px 14px 10px;
+        background: linear-gradient(
+          180deg,
+          rgba(37, 99, 235, 0.08),
+          rgba(37, 99, 235, 0)
+        );
+        border-right: 1px solid rgba(30, 58, 138, 0.12);
+        display: flex;
+        flex-direction: column;
+      }
+
+      #titleRow {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #topActions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      #title {
+        font-size: 16px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      #wallet {
+        font-size: 12px;
+        font-weight: 800;
+        color: #854d0e;
+        background: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 999px;
+        padding: 3px 9px;
+      }
+
+      #themesBtn {
+        border: 0;
+        border-radius: 999px;
+        padding: 6px 10px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #ffffff;
+        background: #7c3aed;
+      }
+
+      #sub {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+      }
+
+      #modeTabs {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+      }
+
+      .tab {
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 5px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #1e293b;
+        background: #dbeafe;
+      }
+
+      .tab.active {
+        color: #fff;
+        background: var(--accent);
+      }
+
+      #levelMenu {
+        margin-top: 10px;
+        border: 1px solid #bfdbfe;
+        border-radius: 10px;
+        background: rgba(239, 246, 255, 0.72);
+        padding: 8px;
+        flex: 1;
+        min-height: 220px;
+        max-height: min(58vh, 560px);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      #levelControls {
+        display: none;
+        margin-bottom: 8px;
+      }
+
+      #levelControls.show {
+        display: block;
+      }
+
+      #levelControls label {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #1d4ed8;
+      }
+
+      #nodeCountSelect {
+        width: 100%;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 7px;
+        font-size: 12px;
+        color: #1e293b;
+        background: #ffffff;
+      }
+
+      #levelMenuTitle {
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        color: #1e3a8a;
+        text-transform: uppercase;
+        margin-bottom: 7px;
+      }
+
+      #levelList {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        overflow: auto;
+        flex: 1;
+        min-height: 0;
+        align-content: start;
+        padding-right: 2px;
+      }
+
+      #levelList.timeTrialConfig {
+        display: block;
+      }
+
+      .levelItem {
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 6px 4px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #1e293b;
+        background: #eff6ff;
+      }
+
+      .levelItem.current {
+        color: #fff;
+        border-color: #1d4ed8;
+        background: #1d4ed8;
+      }
+
+      .levelItem.completed {
+        border-color: #10b981;
+        background: #dcfce7;
+        color: #065f46;
+      }
+
+      .levelItem.current.completed {
+        color: #fff;
+        border-color: #047857;
+        background: #047857;
+      }
+
+      .ttConfig {
+        display: grid;
+        gap: 8px;
+        width: 100%;
+      }
+
+      .ttRow {
+        display: grid;
+        gap: 4px;
+      }
+
+      .ttRow label {
+        font-size: 11px;
+        font-weight: 800;
+        color: #1e3a8a;
+      }
+
+      .ttRow select {
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 7px;
+        font-size: 12px;
+        color: #1e293b;
+        background: #ffffff;
+        width: 100%;
+      }
+
+      .ttHelp {
+        font-size: 11px;
+        color: #334155;
+        line-height: 1.35;
+      }
+
+      .ttHud {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      .ttStat {
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 7px;
+        font-size: 11px;
+        font-weight: 900;
+        color: #1e3a8a;
+        background: #eff6ff;
+        text-align: center;
+      }
+
+      .ttStart {
+        margin-top: 2px;
+        width: 100%;
+      }
+
+      #gameWrap {
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+
+      canvas {
+        width: 100%;
+        max-width: min(72vh, 640px);
+        margin: 0 auto;
+        aspect-ratio: 1 / 1;
+        display: block;
+        border-radius: 12px;
+        background:
+          linear-gradient(
+            180deg,
+            rgba(219, 234, 254, 0.85),
+            rgba(219, 234, 254, 0.55)
+          ),
+          repeating-linear-gradient(
+            0deg,
+            rgba(148, 163, 184, 0.08),
+            rgba(148, 163, 184, 0.08) 1px,
+            transparent 1px,
+            transparent 14px
+          );
+        border: 1px solid rgba(37, 99, 235, 0.16);
+      }
+
+      #statusRow {
+        margin-top: 7px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #objective {
+        font-size: 12px;
+        font-weight: 800;
+        color: #1e3a8a;
+      }
+
+      #timer {
+        font-size: 12px;
+        font-weight: 900;
+        color: #7f1d1d;
+        min-width: 74px;
+        text-align: right;
+      }
+
+      #barA {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 7px;
+      }
+
+      button {
+        border: 0;
+        border-radius: 10px;
+        padding: 10px 6px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #fff;
+        background: var(--accent);
+      }
+
+      button.warn {
+        background: #be123c;
+      }
+
+      button.success {
+        background: #15803d;
+      }
+
+      button:disabled {
+        opacity: 0.45;
+      }
+
+      #cta {
+        padding: 2px 14px 12px;
+        text-align: center;
+        font-size: 11px;
+        color: var(--muted);
+        min-height: 17px;
+      }
+
+      #menu {
+        position: absolute;
+        inset: 0;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.56);
+      }
+
+      #menuCard {
+        width: min(760px, calc(100% - 24px));
+        border-radius: 14px;
+        padding: 16px;
+        background: #ffffff;
+        border: 1px solid #bfdbfe;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+      }
+
+      #menuTitle {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      #menuText {
+        margin: 8px 0 12px;
+        font-size: 12px;
+        color: var(--muted);
+        max-width: 560px;
+      }
+
+      #menuBtns {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
+      #timeTrialResult {
+        position: absolute;
+        inset: 0;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.62);
+        z-index: 25;
+      }
+
+      #timeTrialResultCard {
+        width: min(420px, calc(100% - 24px));
+        border-radius: 14px;
+        padding: 14px;
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+        color: var(--ink);
+      }
+
+      #timeTrialResultTitle {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--ink);
+      }
+
+      #timeTrialResultText {
+        margin: 8px 0 12px;
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 700;
+      }
+
+      #timeTrialResultBtns {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+
+      #themeStore {
+        position: absolute;
+        inset: 0;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        background: rgba(15, 23, 42, 0.62);
+        z-index: 20;
+      }
+
+      #themeStoreCard {
+        width: min(920px, calc(100% - 24px));
+        max-height: calc(100% - 24px);
+        border-radius: 14px;
+        padding: 14px;
+        background: #f8fafc;
+        border: 1px solid #94a3b8;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.22);
+        display: flex;
+        flex-direction: column;
+      }
+
+      #themeStoreTop {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      #themeStoreTitle {
+        margin: 0;
+        font-size: 18px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #0f172a;
+      }
+
+      #themeStoreDesc {
+        margin: 6px 0 10px;
+        font-size: 12px;
+        color: #334155;
+        font-weight: 600;
+      }
+
+      #closeThemeStoreBtn {
+        border: 0;
+        border-radius: 8px;
+        padding: 8px 10px;
+        font-size: 12px;
+        font-weight: 800;
+        color: #ffffff;
+        background: #334155;
+      }
+
+      #themeStoreList {
+        overflow: auto;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        padding-right: 2px;
+      }
+
+      .themeCard {
+        border: 1px solid #cbd5e1;
+        border-radius: 10px;
+        padding: 10px;
+        background: #ffffff;
+        box-shadow: 0 1px 0 rgba(148, 163, 184, 0.22);
+      }
+
+      .themeName {
+        font-size: 13px;
+        font-weight: 900;
+        color: #0f172a;
+      }
+
+      .themeDesc {
+        margin-top: 2px;
+        font-size: 12px;
+        color: #334155;
+        line-height: 1.35;
+        min-height: 30px;
+      }
+
+      .themeMeta {
+        margin-top: 6px;
+        font-size: 11px;
+        font-weight: 800;
+        color: #1e293b;
+      }
+
+      .themePreview {
+        margin-top: 8px;
+        border-radius: 8px;
+        border: 1px solid rgba(71, 85, 105, 0.45);
+        height: 44px;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+      }
+
+      .themePreviewTop {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .themeDot {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid rgba(15, 23, 42, 0.35);
+      }
+
+      .themeLine {
+        height: 4px;
+        width: 38px;
+        border-radius: 2px;
+        border: 1px solid rgba(15, 23, 42, 0.22);
+      }
+
+      .themeBtn {
+        margin-top: 8px;
+        width: 100%;
+      }
+
+      @media (max-width: 900px) {
+        #layout {
+          grid-template-columns: 1fr;
+        }
+
+        #top {
+          border-right: 0;
+          border-bottom: 1px solid rgba(30, 58, 138, 0.12);
+        }
+
+        #modeTabs {
+          grid-template-columns: repeat(4, 1fr);
+        }
+      }
+
+      @media (max-width: 560px) {
+        #modeTabs {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        #menuBtns {
+          grid-template-columns: repeat(2, 1fr);
+        }
+
+        #levelList {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+
+        #themeStoreList {
+          grid-template-columns: 1fr;
+        }
+
+        #levelList {
+          grid-template-columns: repeat(6, minmax(0, 1fr));
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="layout">
+        <div id="top">
+          <div id="titleRow">
+            <div id="title">Uncrossed</div>
+            <div id="topActions">
+              <div id="wallet">Coins: 0</div>
+              <button id="themesBtn">Themes</button>
+            </div>
+          </div>
+          <div id="sub" aria-live="polite">Classic · Level 1 / 60</div>
+          <div id="modeTabs">
+            <button class="tab active" data-mode="classic">Classic</button>
+            <button class="tab" data-mode="daily">Daily</button>
+            <button class="tab" data-mode="weekly">Weekly</button>
+            <button class="tab" data-mode="time-trial">Time Trial</button>
+          </div>
+          <div id="levelMenu">
+            <div id="levelMenuTitle">Levels</div>
+            <div id="levelControls">
+              <label for="nodeCountSelect">Node Count</label>
+              <select id="nodeCountSelect"></select>
+            </div>
+            <div id="levelList" aria-label="Level selection"></div>
+          </div>
+        </div>
+
+        <div id="gameWrap">
+          <canvas id="c" width="520" height="520"></canvas>
+          <div id="statusRow">
+            <div id="objective"></div>
+            <div id="timer"></div>
+          </div>
+
+          <div id="barA">
+            <button id="restart">Restart</button>
+            <button id="settingsBtn" class="success">Sound On</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="cta">Drag nodes to untangle every line.</div>
+
+      <div id="menu">
+        <div id="menuCard">
+          <h1 id="menuTitle">Uncrossed</h1>
+          <p id="menuText">
+            Select a mode, pick a level on the left, and clear intersections.
+          </p>
+          <div id="menuBtns">
+            <button data-launch="classic">Play Classic</button>
+            <button data-launch="daily">Daily</button>
+            <button data-launch="weekly">Weekly</button>
+            <button data-launch="time-trial" class="success">Time Trial</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="timeTrialResult">
+        <div id="timeTrialResultCard">
+          <h2 id="timeTrialResultTitle">Time Trial Complete</h2>
+          <p id="timeTrialResultText">Score 0. Best 0.</p>
+          <div id="timeTrialResultBtns">
+            <button id="timeTrialResultRestartBtn">Start New Run</button>
+            <button id="timeTrialResultCloseBtn">Close</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="themeStore">
+        <div id="themeStoreCard">
+          <div id="themeStoreTop">
+            <h2 id="themeStoreTitle">Themes Store</h2>
+            <button id="closeThemeStoreBtn">Close</button>
+          </div>
+          <p id="themeStoreDesc">
+            Buy themes with coins earned from completed levels, then equip them.
+          </p>
+          <div id="themeStoreList"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      ;(() => {
+        const W = 520
+        const H = 520
+        const NODE_RADIUS = 18
+        const LINE_WIDTH = 4
+        const MAX_GENERATION_ATTEMPTS = 24
+        const MIN_TIME_TRIAL_INTERSECTIONS = 2
+        const CLASSIC_NODE_COUNT_MIN = 5
+        const CLASSIC_NODE_COUNT_MAX = 10
+        const CLASSIC_LEVELS_PER_NODE_COUNT = 100
+
+        const STORAGE_KEYS = {
+          progress: "node-master.player-progress",
+          coins: "node-master.coins",
+          settings: "node-master.settings",
+          completed: "node-master.completed-levels",
+        }
+
+        const MODES = {
+          CLASSIC: "classic",
+          DAILY: "daily",
+          WEEKLY: "weekly",
+          TIME_TRIAL: "time-trial",
+        }
+
+        const MODE_LEVELS = {
+          [MODES.CLASSIC]:
+            (CLASSIC_NODE_COUNT_MAX - CLASSIC_NODE_COUNT_MIN + 1) *
+            CLASSIC_LEVELS_PER_NODE_COUNT,
+          [MODES.DAILY]: 10,
+          [MODES.WEEKLY]: 50,
+          [MODES.TIME_TRIAL]: Infinity,
+        }
+
+        const canvas = document.getElementById("c")
+        const ctx = canvas.getContext("2d")
+        const app = document.getElementById("app")
+        const sub = document.getElementById("sub")
+        const wallet = document.getElementById("wallet")
+        const objective = document.getElementById("objective")
+        const timerEl = document.getElementById("timer")
+        const cta = document.getElementById("cta")
+        const levelMenuTitle = document.getElementById("levelMenuTitle")
+        const levelControls = document.getElementById("levelControls")
+        const nodeCountSelect = document.getElementById("nodeCountSelect")
+        const levelList = document.getElementById("levelList")
+        const restartBtn = document.getElementById("restart")
+        const settingsBtn = document.getElementById("settingsBtn")
+        const menu = document.getElementById("menu")
+        const themesBtn = document.getElementById("themesBtn")
+        const themeStore = document.getElementById("themeStore")
+        const closeThemeStoreBtn = document.getElementById("closeThemeStoreBtn")
+        const themeStoreList = document.getElementById("themeStoreList")
+        const timeTrialResult = document.getElementById("timeTrialResult")
+        const timeTrialResultText = document.getElementById(
+          "timeTrialResultText",
+        )
+        const timeTrialResultRestartBtn = document.getElementById(
+          "timeTrialResultRestartBtn",
+        )
+        const timeTrialResultCloseBtn = document.getElementById(
+          "timeTrialResultCloseBtn",
+        )
+        const victoryAudio = new Audio("./victory.mp3")
+        victoryAudio.preload = "auto"
+
+        const DEFAULT_THEME = {
+          background: "#f8fafc",
+          surface: "#ffffff",
+          surfaceAlt: "#dbeafe",
+          primary: "#2563eb",
+          text: "#0f172a",
+          mutedText: "#64748b",
+          buttonText: "#ffffff",
+        }
+
+        const THEME_CATALOG = [
+          {
+            id: "green-theme",
+            name: "Green Theme",
+            description: "A refreshing green color scheme for the game.",
+            price: 100,
+            priceType: "coins",
+            theme: {
+              primary: "#16a34a",
+              background: "#f0fdf4",
+              surfaceAlt: "#b2f3c9",
+            },
+          },
+          {
+            id: "sunset-theme",
+            name: "Sunset Theme",
+            description: "Warm orange and rose tones across the app.",
+            price: 120,
+            priceType: "coins",
+            theme: {
+              primary: "#ea580c",
+              background: "#fff7ed",
+              surfaceAlt: "#ffedd5",
+              mutedText: "#9a3412",
+            },
+          },
+          {
+            id: "mint-theme",
+            name: "Mint Theme",
+            description: "Fresh mint and teal accent colors.",
+            price: 130,
+            priceType: "coins",
+            theme: {
+              primary: "#0f766e",
+              background: "#f0fdfa",
+              surfaceAlt: "#ccfbf1",
+            },
+          },
+          {
+            id: "crimson-theme",
+            name: "Crimson Theme",
+            description: "Bold red accents for a high-energy style.",
+            price: 150,
+            priceType: "coins",
+            theme: {
+              primary: "#b91c1c",
+              background: "#fef2f2",
+              surfaceAlt: "#fee2e2",
+              mutedText: "#991b1b",
+            },
+          },
+          {
+            id: "berry-theme",
+            name: "Berry Theme",
+            description: "Rich berry tones with a soft cream contrast.",
+            price: 160,
+            priceType: "coins",
+            theme: {
+              primary: "#be185d",
+              background: "#fff1f2",
+              surface: "#ffffff",
+              surfaceAlt: "#ffe4e6",
+              text: "#881337",
+              mutedText: "#9f1239",
+            },
+          },
+          {
+            id: "forest-theme",
+            name: "Forest Theme",
+            description: "Earthy greens and mossy highlights for calm play.",
+            price: 175,
+            priceType: "coins",
+            theme: {
+              primary: "#15803d",
+              background: "#f0fdf4",
+              surface: "#ffffff",
+              surfaceAlt: "#dcfce7",
+              text: "#14532d",
+              mutedText: "#166534",
+            },
+          },
+          {
+            id: "obsidian-theme",
+            name: "Obsidian Theme",
+            description: "A deep black-and-slate theme with crisp contrast.",
+            price: 190,
+            priceType: "coins",
+            theme: {
+              primary: "#60a5fa",
+              background: "#020617",
+              surface: "#0f172a",
+              surfaceAlt: "#1e293b",
+              text: "#e2e8f0",
+              mutedText: "#94a3b8",
+            },
+          },
+          {
+            id: "midnight-theme",
+            name: "Midnight Theme",
+            description: "Deep navy tones for a calm night look.",
+            price: 140,
+            priceType: "coins",
+            theme: {
+              primary: "#1d4ed8",
+              background: "#0f172a",
+              surface: "#111827",
+              surfaceAlt: "#1e293b",
+              text: "#e2e8f0",
+              mutedText: "#94a3b8",
+            },
+          },
+          {
+            id: "dark-ember-theme",
+            name: "Dark Ember",
+            description: "Dark red and ember orange tones.",
+            price: 215,
+            priceType: "coins",
+            theme: {
+              primary: "#dc2626",
+              background: "#1a0a0a",
+              surface: "#2a1212",
+              surfaceAlt: "#3f1d1d",
+              text: "#fee2e2",
+              mutedText: "#fca5a5",
+            },
+          },
+          {
+            id: "espresso-theme",
+            name: "Espresso Theme",
+            description: "Dark coffee browns with warm tan highlights.",
+            price: 225,
+            priceType: "coins",
+            theme: {
+              primary: "#a16207",
+              background: "#1c130d",
+              surface: "#2d1f16",
+              surfaceAlt: "#3f2a1d",
+              text: "#fef3c7",
+              mutedText: "#fcd34d",
+            },
+          },
+          {
+            id: "evergreen-night-theme",
+            name: "Evergreen Night",
+            description: "Dark green pine shades with mint accents.",
+            price: 230,
+            priceType: "coins",
+            theme: {
+              primary: "#16a34a",
+              background: "#08130c",
+              surface: "#102016",
+              surfaceAlt: "#1a2e22",
+              text: "#dcfce7",
+              mutedText: "#86efac",
+            },
+          },
+        ]
+
+        let state = {
+          mode: MODES.CLASSIC,
+          soundEnabled: true,
+          coins: 0,
+          classicNodeMenuCount: CLASSIC_NODE_COUNT_MIN,
+          ownedThemeIds: [],
+          equippedThemeId: null,
+          timeTrialNodeCount: 7,
+          timeTrialDurationSeconds: 120,
+          modeProgress: {
+            [MODES.CLASSIC]: 1,
+            [MODES.DAILY]: 1,
+            [MODES.WEEKLY]: 1,
+          },
+          completedByMode: {
+            [MODES.CLASSIC]: {},
+            [MODES.DAILY]: {},
+            [MODES.WEEKLY]: {},
+          },
+          timeTrialHighScore: 0,
+        }
+
+        let nodes = []
+        let links = []
+        let startNodes = []
+        let solvedNodes = []
+        let currentLevelId = 1
+        let dragIndex = -1
+        let pointerId = null
+        let won = false
+        let crossedLinkIds = new Set()
+        let fxPieces = []
+        let fxRaf = 0
+        let timerRaf = 0
+        let autoAdvanceTimer = 0
+        let timeTrialSecondsLeft = 120
+        let timeTrialScore = 0
+
+        function loadJSON(key, fallback) {
+          try {
+            const raw = localStorage.getItem(key)
+            if (!raw) return fallback
+            return JSON.parse(raw)
+          } catch {
+            return fallback
+          }
+        }
+
+        function saveJSON(key, value) {
+          localStorage.setItem(key, JSON.stringify(value))
+        }
+
+        function loadState() {
+          const savedProgress = loadJSON(STORAGE_KEYS.progress, null)
+          const savedCoins = Number(
+            localStorage.getItem(STORAGE_KEYS.coins) || 0,
+          )
+          const savedSettings = loadJSON(STORAGE_KEYS.settings, {
+            soundEnabled: true,
+          })
+          const savedCompleted = loadJSON(STORAGE_KEYS.completed, null)
+
+          if (savedProgress && typeof savedProgress === "object") {
+            if (savedProgress.modeProgress) {
+              state.modeProgress = {
+                ...state.modeProgress,
+                ...savedProgress.modeProgress,
+              }
+            }
+            if (typeof savedProgress.selectedPackId === "string") {
+              // Kept for backward compatibility with older saves.
+            }
+            if (typeof savedProgress.timeTrialHighScore === "number") {
+              state.timeTrialHighScore = savedProgress.timeTrialHighScore
+            }
+            if (Array.isArray(savedProgress.ownedThemeIds)) {
+              state.ownedThemeIds = savedProgress.ownedThemeIds.filter(
+                (entry) => typeof entry === "string",
+              )
+            }
+            if (typeof savedProgress.equippedThemeId === "string") {
+              state.equippedThemeId = savedProgress.equippedThemeId
+            } else if (
+              typeof savedProgress.equippedThemeCosmeticId === "string"
+            ) {
+              state.equippedThemeId = savedProgress.equippedThemeCosmeticId
+            }
+            if (typeof savedProgress.classicNodeMenuCount === "number") {
+              state.classicNodeMenuCount = Math.max(
+                CLASSIC_NODE_COUNT_MIN,
+                Math.min(
+                  CLASSIC_NODE_COUNT_MAX,
+                  Math.floor(savedProgress.classicNodeMenuCount),
+                ),
+              )
+            }
+            if (typeof savedProgress.timeTrialNodeCount === "number") {
+              state.timeTrialNodeCount = Math.max(
+                5,
+                Math.min(15, Math.floor(savedProgress.timeTrialNodeCount)),
+              )
+            }
+            if (typeof savedProgress.timeTrialDurationSeconds === "number") {
+              state.timeTrialDurationSeconds = Math.max(
+                30,
+                Math.min(
+                  300,
+                  Math.floor(savedProgress.timeTrialDurationSeconds),
+                ),
+              )
+            }
+          }
+
+          if (savedCompleted && typeof savedCompleted === "object") {
+            state.completedByMode = {
+              ...state.completedByMode,
+              ...savedCompleted,
+            }
+          }
+
+          state.coins = Number.isFinite(savedCoins)
+            ? Math.max(0, savedCoins)
+            : 0
+          state.soundEnabled = !!savedSettings.soundEnabled
+          settingsBtn.textContent = state.soundEnabled
+            ? "Sound On"
+            : "Sound Off"
+          updateWallet()
+        }
+
+        function persistState() {
+          saveJSON(STORAGE_KEYS.progress, {
+            modeProgress: state.modeProgress,
+            timeTrialHighScore: state.timeTrialHighScore,
+            ownedThemeIds: state.ownedThemeIds,
+            equippedThemeId: state.equippedThemeId,
+            classicNodeMenuCount: state.classicNodeMenuCount,
+            timeTrialNodeCount: state.timeTrialNodeCount,
+            timeTrialDurationSeconds: state.timeTrialDurationSeconds,
+          })
+          saveJSON(STORAGE_KEYS.completed, state.completedByMode)
+          localStorage.setItem(STORAGE_KEYS.coins, String(state.coins))
+          saveJSON(STORAGE_KEYS.settings, { soundEnabled: state.soundEnabled })
+        }
+
+        function updateWallet() {
+          wallet.textContent = `Coins: ${state.coins}`
+          renderThemeStore()
+        }
+
+        function getThemeById(themeId) {
+          return THEME_CATALOG.find((theme) => theme.id === themeId) || null
+        }
+
+        function getActiveTheme() {
+          const equipped = getThemeById(state.equippedThemeId)
+          if (!equipped) return DEFAULT_THEME
+          return {
+            ...DEFAULT_THEME,
+            ...(equipped.theme || {}),
+          }
+        }
+
+        function applyThemeToDocument() {
+          const theme = getActiveTheme()
+          const root = document.documentElement
+          root.style.setProperty("--bg-a", theme.background)
+          root.style.setProperty("--bg-b", theme.surfaceAlt)
+          root.style.setProperty("--panel", theme.surface)
+          root.style.setProperty("--panel-border", theme.primary)
+          root.style.setProperty("--ink", theme.text)
+          root.style.setProperty("--muted", theme.mutedText)
+          root.style.setProperty("--line-safe", theme.primary)
+          root.style.setProperty("--accent", theme.primary)
+          root.style.setProperty("--accent-2", theme.surfaceAlt)
+        }
+
+        function isThemeOwned(themeId) {
+          return state.ownedThemeIds.includes(themeId)
+        }
+
+        function buyTheme(theme) {
+          if (theme.priceType !== "coins") return
+          if (isThemeOwned(theme.id)) return
+          if (state.coins < theme.price) return
+          state.coins -= theme.price
+          state.ownedThemeIds = [...state.ownedThemeIds, theme.id]
+          state.equippedThemeId = theme.id
+          persistState()
+          applyThemeToDocument()
+          renderThemeStore()
+          updateWallet()
+          cta.textContent = `${theme.name} purchased and equipped.`
+        }
+
+        function equipTheme(themeId) {
+          if (!isThemeOwned(themeId)) return
+          state.equippedThemeId = themeId
+          persistState()
+          applyThemeToDocument()
+          renderThemeStore()
+          cta.textContent = `${getThemeById(themeId)?.name || "Theme"} equipped.`
+        }
+
+        function equipDefaultTheme() {
+          state.equippedThemeId = null
+          persistState()
+          applyThemeToDocument()
+          renderThemeStore()
+          cta.textContent = "Default theme equipped."
+        }
+
+        function renderThemeStore() {
+          if (!themeStoreList) return
+          themeStoreList.innerHTML = ""
+
+          const defaultCard = document.createElement("div")
+          defaultCard.className = "themeCard"
+          defaultCard.innerHTML = `
+            <div class="themeName">Default Theme</div>
+            <div class="themeDesc">Built-in light theme.</div>
+            <div class="themeMeta">Price: Free</div>
+            <div class="themePreview" style="background:${DEFAULT_THEME.background};border-color:${DEFAULT_THEME.surfaceAlt}">
+              <div class="themePreviewTop">
+                <div class="themeDot" style="background:${DEFAULT_THEME.primary}"></div>
+                <div class="themeLine" style="background:${DEFAULT_THEME.text}"></div>
+              </div>
+            </div>
+          `
+          const defaultBtn = document.createElement("button")
+          defaultBtn.className = "themeBtn"
+          if (state.equippedThemeId === null) {
+            defaultBtn.textContent = "Equipped"
+            defaultBtn.disabled = true
+          } else {
+            defaultBtn.textContent = "Equip"
+            defaultBtn.addEventListener("click", equipDefaultTheme)
+          }
+          defaultCard.appendChild(defaultBtn)
+          themeStoreList.appendChild(defaultCard)
+
+          const coinThemes = THEME_CATALOG.filter(
+            (theme) => theme.priceType === "coins",
+          )
+
+          for (const theme of coinThemes) {
+            const palette = { ...DEFAULT_THEME, ...(theme.theme || {}) }
+            const isOwned = isThemeOwned(theme.id)
+            const isEquipped = state.equippedThemeId === theme.id
+            const canAfford = state.coins >= theme.price
+
+            const card = document.createElement("div")
+            card.className = "themeCard"
+            card.innerHTML = `
+              <div class="themeName">${theme.name}</div>
+              <div class="themeDesc">${theme.description}</div>
+              <div class="themeMeta">${isOwned ? "Owned" : `${theme.price} coins`}</div>
+              <div class="themePreview" style="background:${palette.background};border-color:${palette.surfaceAlt}">
+                <div class="themePreviewTop">
+                  <div class="themeDot" style="background:${palette.primary}"></div>
+                  <div class="themeLine" style="background:${palette.text}"></div>
+                </div>
+              </div>
+            `
+
+            const actionBtn = document.createElement("button")
+            actionBtn.className = "themeBtn"
+            if (isEquipped) {
+              actionBtn.textContent = "Equipped"
+              actionBtn.disabled = true
+            } else if (isOwned) {
+              actionBtn.textContent = "Equip"
+              actionBtn.addEventListener("click", () => equipTheme(theme.id))
+            } else if (canAfford) {
+              actionBtn.textContent = `Buy (${theme.price} coins)`
+              actionBtn.addEventListener("click", () => buyTheme(theme))
+            } else {
+              actionBtn.textContent = `Need ${theme.price} coins`
+              actionBtn.disabled = true
+            }
+
+            card.appendChild(actionBtn)
+            themeStoreList.appendChild(card)
+          }
+        }
+
+        function playVictorySound() {
+          if (!state.soundEnabled) return
+          try {
+            victoryAudio.currentTime = 0
+            const playPromise = victoryAudio.play()
+            if (playPromise && typeof playPromise.catch === "function") {
+              playPromise.catch(() => {})
+            }
+          } catch {}
+        }
+
+        function getCompletionKey(mode, levelId) {
+          return `${levelId}`
+        }
+
+        function getClassicNodeCountForLevel(levelId) {
+          const zeroBased = Math.max(0, levelId - 1)
+          const bucket = Math.floor(zeroBased / CLASSIC_LEVELS_PER_NODE_COUNT)
+          return Math.max(
+            CLASSIC_NODE_COUNT_MIN,
+            Math.min(CLASSIC_NODE_COUNT_MAX, CLASSIC_NODE_COUNT_MIN + bucket),
+          )
+        }
+
+        function getClassicLevelWithinBucket(levelId) {
+          const zeroBased = Math.max(0, levelId - 1)
+          return (zeroBased % CLASSIC_LEVELS_PER_NODE_COUNT) + 1
+        }
+
+        function getClassicGlobalLevelId(nodeCount, levelWithinBucket) {
+          const safeNodeCount = Math.max(
+            CLASSIC_NODE_COUNT_MIN,
+            Math.min(CLASSIC_NODE_COUNT_MAX, nodeCount),
+          )
+          const safeBucketLevel = Math.max(
+            1,
+            Math.min(CLASSIC_LEVELS_PER_NODE_COUNT, levelWithinBucket),
+          )
+          const bucketIndex = safeNodeCount - CLASSIC_NODE_COUNT_MIN
+          return bucketIndex * CLASSIC_LEVELS_PER_NODE_COUNT + safeBucketLevel
+        }
+
+        function isLevelCompleted(mode, levelId) {
+          const modeMap = state.completedByMode[mode] || {}
+          const key = getCompletionKey(mode, levelId)
+          if (modeMap[key]) return true
+          if (mode === MODES.CLASSIC) {
+            for (const oldKey of Object.keys(modeMap)) {
+              if (oldKey.endsWith(`:${levelId}`)) return true
+            }
+          }
+          return false
+        }
+
+        function renderLevelMenu() {
+          levelList.innerHTML = ""
+          levelControls.classList.remove("show")
+
+          if (state.mode === MODES.TIME_TRIAL) {
+            levelList.classList.add("timeTrialConfig")
+            levelMenuTitle.textContent = "Levels"
+
+            const config = document.createElement("div")
+            config.className = "ttConfig"
+
+            const nodeRow = document.createElement("div")
+            nodeRow.className = "ttRow"
+            const nodeLabel = document.createElement("label")
+            nodeLabel.textContent = "Node Count"
+            const nodeSelect = document.createElement("select")
+            for (
+              let i = CLASSIC_NODE_COUNT_MIN;
+              i <= CLASSIC_NODE_COUNT_MAX;
+              i++
+            ) {
+              const option = document.createElement("option")
+              option.value = `${i}`
+              option.textContent = `${i} nodes`
+              if (i === state.timeTrialNodeCount) option.selected = true
+              nodeSelect.appendChild(option)
+            }
+            nodeSelect.addEventListener("change", () => {
+              state.timeTrialNodeCount = Number(nodeSelect.value)
+              persistState()
+            })
+            nodeRow.appendChild(nodeLabel)
+            nodeRow.appendChild(nodeSelect)
+
+            const timeRow = document.createElement("div")
+            timeRow.className = "ttRow"
+            const timeLabel = document.createElement("label")
+            timeLabel.textContent = "Time Limit"
+            const timeSelect = document.createElement("select")
+            const durationOptions = [30, 45, 60, 90, 120, 180, 240, 300]
+            for (const seconds of durationOptions) {
+              const option = document.createElement("option")
+              option.value = `${seconds}`
+              option.textContent = `${seconds}s`
+              if (seconds === state.timeTrialDurationSeconds)
+                option.selected = true
+              timeSelect.appendChild(option)
+            }
+            timeSelect.addEventListener("change", () => {
+              state.timeTrialDurationSeconds = Number(timeSelect.value)
+              persistState()
+            })
+            timeRow.appendChild(timeLabel)
+            timeRow.appendChild(timeSelect)
+
+            const help = document.createElement("div")
+            help.className = "ttHelp"
+            help.textContent = "Choose settings, then start a fresh run."
+
+            const hud = document.createElement("div")
+            hud.className = "ttHud"
+            hud.innerHTML = `
+              <div class="ttStat" id="ttPanelTimer">Time: ${timeTrialSecondsLeft}s</div>
+              <div class="ttStat" id="ttPanelScore">Score: ${timeTrialScore}</div>
+            `
+
+            const startBtn = document.createElement("button")
+            startBtn.className = "ttStart"
+            startBtn.textContent = "Start New Run"
+            startBtn.addEventListener("click", () => {
+              hideTimeTrialResultMenu()
+              startTimeTrialRun()
+              makeCurrentLevel()
+              menu.style.display = "none"
+            })
+
+            config.appendChild(nodeRow)
+            config.appendChild(timeRow)
+            config.appendChild(help)
+            config.appendChild(hud)
+            config.appendChild(startBtn)
+            levelList.appendChild(config)
+            updateTimeTrialPanelStats()
+            return
+          }
+
+          levelList.classList.remove("timeTrialConfig")
+
+          if (state.mode === MODES.CLASSIC) {
+            levelControls.classList.add("show")
+            levelMenuTitle.textContent = "Classic Levels"
+
+            const selectedNodeCount = Math.max(
+              CLASSIC_NODE_COUNT_MIN,
+              Math.min(CLASSIC_NODE_COUNT_MAX, state.classicNodeMenuCount),
+            )
+
+            if (nodeCountSelect.options.length === 0) {
+              for (
+                let nodeCount = CLASSIC_NODE_COUNT_MIN;
+                nodeCount <= CLASSIC_NODE_COUNT_MAX;
+                nodeCount++
+              ) {
+                const option = document.createElement("option")
+                option.value = `${nodeCount}`
+                option.textContent = `${nodeCount} nodes`
+                nodeCountSelect.appendChild(option)
+              }
+            }
+            nodeCountSelect.value = `${selectedNodeCount}`
+
+            for (
+              let levelWithinBucket = 1;
+              levelWithinBucket <= CLASSIC_LEVELS_PER_NODE_COUNT;
+              levelWithinBucket++
+            ) {
+              const globalLevelId = getClassicGlobalLevelId(
+                selectedNodeCount,
+                levelWithinBucket,
+              )
+              const button = document.createElement("button")
+              button.className = "levelItem"
+              if (globalLevelId === currentLevelId)
+                button.classList.add("current")
+              if (isLevelCompleted(state.mode, globalLevelId))
+                button.classList.add("completed")
+              button.textContent = `${levelWithinBucket}`
+              button.title = `${selectedNodeCount} nodes · level ${levelWithinBucket}`
+              button.addEventListener("click", () => {
+                if (autoAdvanceTimer) {
+                  clearTimeout(autoAdvanceTimer)
+                  autoAdvanceTimer = 0
+                }
+                currentLevelId = globalLevelId
+                state.modeProgress[state.mode] = Math.max(
+                  Number(state.modeProgress[state.mode] || 1),
+                  globalLevelId,
+                )
+                persistState()
+                makeCurrentLevel()
+                menu.style.display = "none"
+              })
+              levelList.appendChild(button)
+            }
+
+            return
+          }
+
+          const maxLevels = MODE_LEVELS[state.mode]
+          levelMenuTitle.textContent = `${getModeLabel(state.mode)} Levels`
+          for (let i = 1; i <= maxLevels; i++) {
+            const button = document.createElement("button")
+            button.className = "levelItem"
+            if (i === currentLevelId) button.classList.add("current")
+            if (isLevelCompleted(state.mode, i))
+              button.classList.add("completed")
+            button.textContent = `${i}`
+            button.addEventListener("click", () => {
+              if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer)
+                autoAdvanceTimer = 0
+              }
+              currentLevelId = i
+              state.modeProgress[state.mode] = Math.max(
+                Number(state.modeProgress[state.mode] || 1),
+                i,
+              )
+              persistState()
+              makeCurrentLevel()
+              menu.style.display = "none"
+            })
+            levelList.appendChild(button)
+          }
+        }
+
+        function hashString(value) {
+          let hash = 0
+          for (let i = 0; i < value.length; i++) {
+            hash = (hash * 31 + value.charCodeAt(i)) >>> 0
+          }
+          return hash
+        }
+
+        function createDeterministicRandom(seedText) {
+          let seed = (hashString(seedText) % 2147483646) + 1
+          return () => {
+            seed = (seed * 48271) % 2147483647
+            return seed / 2147483647
+          }
+        }
+
+        function shuffleInPlace(arr, random) {
+          for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(random() * (i + 1))
+            const tmp = arr[i]
+            arr[i] = arr[j]
+            arr[j] = tmp
+          }
+        }
+
+        function deepCloneNodes(source) {
+          return source.map((n) => ({ id: n.id, x: n.x, y: n.y }))
+        }
+
+        function todayKey() {
+          const d = new Date()
+          const y = d.getUTCFullYear()
+          const m = `${d.getUTCMonth() + 1}`.padStart(2, "0")
+          const day = `${d.getUTCDate()}`.padStart(2, "0")
+          return `${y}-${m}-${day}`
+        }
+
+        function weekKey() {
+          const d = new Date()
+          const dt = new Date(
+            Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()),
+          )
+          const day = dt.getUTCDay() || 7
+          dt.setUTCDate(dt.getUTCDate() + 4 - day)
+          const yearStart = new Date(Date.UTC(dt.getUTCFullYear(), 0, 1))
+          const weekNo = Math.ceil(((dt - yearStart) / 86400000 + 1) / 7)
+          return `${dt.getUTCFullYear()}-W${weekNo}`
+        }
+
+        function orient(a, b, c) {
+          const v = (b.y - a.y) * (c.x - b.x) - (b.x - a.x) * (c.y - b.y)
+          if (v === 0) return 0
+          return v > 0 ? 1 : 2
+        }
+
+        function doIntersect(a, b, c, d) {
+          if (a.id === c.id || a.id === d.id || b.id === c.id || b.id === d.id)
+            return false
+          const o1 = orient(a, b, c)
+          const o2 = orient(a, b, d)
+          const o3 = orient(c, d, a)
+          const o4 = orient(c, d, b)
+          return o1 !== o2 && o3 !== o4
+        }
+
+        function getIntersectingLinkIds(currentNodes, currentLinks) {
+          const intersections = new Set()
+          for (let i = 0; i < currentLinks.length; i++) {
+            for (let j = i + 1; j < currentLinks.length; j++) {
+              const firstLink = currentLinks[i]
+              const secondLink = currentLinks[j]
+
+              if (
+                firstLink.node1Id === secondLink.node1Id ||
+                firstLink.node1Id === secondLink.node2Id ||
+                firstLink.node2Id === secondLink.node1Id ||
+                firstLink.node2Id === secondLink.node2Id
+              ) {
+                continue
+              }
+
+              const a = currentNodes.find((n) => n.id === firstLink.node1Id)
+              const b = currentNodes.find((n) => n.id === firstLink.node2Id)
+              const c = currentNodes.find((n) => n.id === secondLink.node1Id)
+              const d = currentNodes.find((n) => n.id === secondLink.node2Id)
+              if (!a || !b || !c || !d) continue
+
+              if (doIntersect(a, b, c, d)) {
+                intersections.add(firstLink.id)
+                intersections.add(secondLink.id)
+              }
+            }
+          }
+          return intersections
+        }
+
+        function layoutSolvedNodes(inputNodes) {
+          const centerX = W / 2
+          const centerY = H / 2
+          const radius = Math.min(W, H) * 0.35
+          const ordered = [...inputNodes].sort((a, b) => {
+            const aNum = Number(a.id.replace(/\D+/g, ""))
+            const bNum = Number(b.id.replace(/\D+/g, ""))
+            return aNum - bNum
+          })
+          return ordered.map((n, index) => {
+            const angle = (index / ordered.length) * Math.PI * 2
+            return {
+              ...n,
+              x: centerX + Math.cos(angle) * radius,
+              y: centerY + Math.sin(angle) * radius,
+            }
+          })
+        }
+
+        function normalizeNodePositions(inputNodes) {
+          const minDist = NODE_RADIUS * 2.1
+          const maxPush = 20
+          const out = deepCloneNodes(inputNodes)
+
+          for (let pass = 0; pass < 28; pass++) {
+            for (let i = 0; i < out.length; i++) {
+              for (let j = i + 1; j < out.length; j++) {
+                const a = out[i]
+                const b = out[j]
+                let dx = b.x - a.x
+                let dy = b.y - a.y
+                let dist = Math.hypot(dx, dy)
+                if (dist < 0.001) {
+                  dx = Math.random() - 0.5
+                  dy = Math.random() - 0.5
+                  dist = Math.hypot(dx, dy)
+                }
+                if (dist < minDist) {
+                  const push = Math.min((minDist - dist) * 0.5, maxPush)
+                  const ux = dx / dist
+                  const uy = dy / dist
+                  a.x -= ux * push
+                  a.y -= uy * push
+                  b.x += ux * push
+                  b.y += uy * push
+                }
+              }
+            }
+            for (const n of out) {
+              n.x = Math.max(NODE_RADIUS, Math.min(W - NODE_RADIUS, n.x))
+              n.y = Math.max(NODE_RADIUS, Math.min(H - NODE_RADIUS, n.y))
+            }
+          }
+          return out
+        }
+
+        function generateLevel(level, seedText, requiredNodeCount) {
+          const random = seedText
+            ? createDeterministicRandom(seedText)
+            : Math.random
+          const rand =
+            typeof random === "function" ? random : () => Math.random()
+
+          const nodeCount =
+            typeof requiredNodeCount === "number"
+              ? Math.max(5, Math.min(15, Math.floor(requiredNodeCount)))
+              : Math.min(4 + Math.floor(level / 2), 15)
+
+          const maxSolvableLinks = Math.max(nodeCount, 2 * nodeCount - 3)
+          const linkCount = Math.min(
+            nodeCount + Math.floor(level / 3),
+            maxSolvableLinks,
+            20,
+          )
+
+          const nodesLocal = []
+          const linksLocal = []
+          const centerX = W / 2
+          const centerY = H / 2
+          const radius = Math.min(W, H) * 0.35
+
+          for (let i = 0; i < nodeCount; i++) {
+            const angle = (i / nodeCount) * Math.PI * 2
+            nodesLocal.push({
+              id: `node-${i}`,
+              x: centerX + Math.cos(angle) * radius + (rand() - 0.5) * 54,
+              y: centerY + Math.sin(angle) * radius + (rand() - 0.5) * 54,
+            })
+          }
+
+          for (let i = 0; i < nodeCount; i++) {
+            linksLocal.push({
+              id: `link-${i}`,
+              node1Id: `node-${i}`,
+              node2Id: `node-${(i + 1) % nodeCount}`,
+            })
+          }
+
+          const fanTargets = Array.from(
+            { length: Math.max(0, nodeCount - 3) },
+            (_, idx) => idx + 2,
+          )
+          shuffleInPlace(fanTargets, rand)
+          let extraLinks = linkCount - nodeCount
+          let fanIndex = 0
+          while (extraLinks > 0 && fanIndex < fanTargets.length) {
+            linksLocal.push({
+              id: `link-extra-${fanIndex}`,
+              node1Id: "node-0",
+              node2Id: `node-${fanTargets[fanIndex]}`,
+            })
+            fanIndex++
+            extraLinks--
+          }
+
+          let tangled = normalizeNodePositions(nodesLocal)
+          for (let attempt = 0; attempt < 40; attempt++) {
+            const candidate = normalizeNodePositions(
+              nodesLocal.map((n) => ({
+                id: n.id,
+                x: centerX + (rand() - 0.5) * Math.min(W, H) * 0.7,
+                y: centerY + (rand() - 0.5) * Math.min(W, H) * 0.7,
+              })),
+            )
+            const count = getIntersectingLinkIds(candidate, linksLocal).size
+            if (count >= 1) {
+              tangled = candidate
+              break
+            }
+          }
+
+          return {
+            nodes: tangled,
+            links: linksLocal,
+            solvedNodes: layoutSolvedNodes(nodesLocal),
+          }
+        }
+
+        function generateLevelForMode(mode, levelId) {
+          if (mode === MODES.TIME_TRIAL) {
+            const nodeCount = Math.max(
+              5,
+              Math.min(15, Math.floor(state.timeTrialNodeCount)),
+            )
+            let generated = null
+            for (
+              let attempt = 0;
+              attempt < MAX_GENERATION_ATTEMPTS;
+              attempt++
+            ) {
+              const seed = `tt-${Date.now()}-${Math.random()}-${attempt}`
+              const candidate = generateLevel(
+                (nodeCount - 4) * 2,
+                seed,
+                nodeCount,
+              )
+              if (
+                getIntersectingLinkIds(candidate.nodes, candidate.links).size >=
+                MIN_TIME_TRIAL_INTERSECTIONS
+              ) {
+                generated = candidate
+                break
+              }
+            }
+            return (
+              generated ||
+              generateLevel(nodeCount, `tt-fallback-${Date.now()}`, nodeCount)
+            )
+          }
+
+          if (mode === MODES.CLASSIC) {
+            const nodeCount = getClassicNodeCountForLevel(levelId)
+            const levelWithinBucket = getClassicLevelWithinBucket(levelId)
+            const modeSeedPrefix = `classic:${nodeCount}:${levelWithinBucket}`
+            return generateLevel(levelWithinBucket, modeSeedPrefix, nodeCount)
+          }
+
+          const modeSeedPrefix =
+            mode === MODES.DAILY
+              ? `daily:${todayKey()}:${levelId}`
+              : `weekly:${weekKey()}:${levelId}`
+
+          return generateLevel(levelId, modeSeedPrefix)
+        }
+
+        function getModeLabel(mode) {
+          if (mode === MODES.DAILY) return "Daily"
+          if (mode === MODES.WEEKLY) return "Weekly"
+          if (mode === MODES.TIME_TRIAL) return "Time Trial"
+          return "Classic"
+        }
+
+        function updateTopText() {
+          const modeLabel = getModeLabel(state.mode)
+          if (state.mode === MODES.TIME_TRIAL) {
+            sub.textContent = `${modeLabel} · Score ${timeTrialScore} · Best ${state.timeTrialHighScore}`
+            return
+          }
+          if (state.mode === MODES.CLASSIC) {
+            const nodeCount = getClassicNodeCountForLevel(currentLevelId)
+            const levelWithinBucket =
+              getClassicLevelWithinBucket(currentLevelId)
+            sub.textContent = `${modeLabel} · ${nodeCount} Nodes · Level ${levelWithinBucket} / ${CLASSIC_LEVELS_PER_NODE_COUNT}`
+            return
+          }
+          const maxLevels = MODE_LEVELS[state.mode]
+          sub.textContent = `${modeLabel} · Level ${currentLevelId} / ${maxLevels}`
+        }
+
+        function updateObjective() {
+          crossedLinkIds = getIntersectingLinkIds(nodes, links)
+          objective.textContent = ""
+        }
+
+        function updateTimeTrialPanelStats() {
+          const panelTimer = document.getElementById("ttPanelTimer")
+          const panelScore = document.getElementById("ttPanelScore")
+          if (panelTimer)
+            panelTimer.textContent = `Time: ${timeTrialSecondsLeft}s`
+          if (panelScore) panelScore.textContent = `Score: ${timeTrialScore}`
+        }
+
+        function hideTimeTrialResultMenu() {
+          timeTrialResult.style.display = "none"
+        }
+
+        function showTimeTrialResultMenu() {
+          timeTrialResultText.textContent = `Score ${timeTrialScore}. Best ${state.timeTrialHighScore}.`
+          timeTrialResult.style.display = "flex"
+        }
+
+        function makeCurrentLevel() {
+          if (autoAdvanceTimer) {
+            clearTimeout(autoAdvanceTimer)
+            autoAdvanceTimer = 0
+          }
+          const generated = generateLevelForMode(state.mode, currentLevelId)
+          nodes = deepCloneNodes(generated.nodes)
+          links = generated.links.map((l) => ({ ...l }))
+          solvedNodes = deepCloneNodes(generated.solvedNodes)
+          startNodes = deepCloneNodes(nodes)
+          if (state.mode === MODES.CLASSIC) {
+            state.classicNodeMenuCount =
+              getClassicNodeCountForLevel(currentLevelId)
+          }
+          won = false
+          cta.textContent =
+            state.mode === MODES.TIME_TRIAL
+              ? "Solve fast for points. Difficulty climbs every clears."
+              : "Drag nodes until all intersections disappear."
+          updateTopText()
+          renderLevelMenu()
+          updateObjective()
+          draw()
+        }
+
+        function draw() {
+          ctx.clearRect(0, 0, W, H)
+
+          for (const l of links) {
+            const a = nodes.find((n) => n.id === l.node1Id)
+            const b = nodes.find((n) => n.id === l.node2Id)
+            if (!a || !b) continue
+            const isCrossed = crossedLinkIds.has(l.id)
+            ctx.strokeStyle = isCrossed ? "#ef4444" : "#2563eb"
+            ctx.lineWidth = isCrossed ? LINE_WIDTH + 2 : LINE_WIDTH
+            ctx.lineCap = "round"
+            ctx.beginPath()
+            ctx.moveTo(a.x, a.y)
+            ctx.lineTo(b.x, b.y)
+            ctx.stroke()
+          }
+
+          for (const n of nodes) {
+            ctx.fillStyle = "#ffffff"
+            ctx.beginPath()
+            ctx.arc(n.x, n.y, NODE_RADIUS, 0, Math.PI * 2)
+            ctx.fill()
+            ctx.strokeStyle = "#1d4ed8"
+            ctx.lineWidth = 3
+            ctx.stroke()
+            ctx.fillStyle = "#1d4ed8"
+            ctx.beginPath()
+            ctx.arc(n.x, n.y, 4, 0, Math.PI * 2)
+            ctx.fill()
+          }
+
+          if (fxPieces.length) {
+            for (const p of fxPieces) {
+              p.x += p.vx
+              p.y += p.vy
+              p.vy += 0.16
+              p.life -= 1
+              if (p.life <= 0) continue
+              ctx.globalAlpha = Math.max(0, p.life / p.maxLife)
+              ctx.fillStyle = p.color
+              ctx.fillRect(p.x, p.y, p.size, p.size)
+            }
+            ctx.globalAlpha = 1
+            fxPieces = fxPieces.filter((p) => p.life > 0)
+          }
+        }
+
+        function spawnWinFx() {
+          app.classList.remove("win-pop")
+          void app.offsetWidth
+          app.classList.add("win-pop")
+          setTimeout(() => app.classList.remove("win-pop"), 420)
+
+          const colors = ["#2563eb", "#22c55e", "#f59e0b", "#ef4444", "#ffffff"]
+          fxPieces = []
+          for (const n of nodes) {
+            for (let i = 0; i < 8; i++) {
+              const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.4
+              const speed = 1.5 + Math.random() * 2.2
+              fxPieces.push({
+                x: n.x,
+                y: n.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed - 1.8,
+                size: 4 + Math.random() * 2,
+                color: colors[(i + hashString(n.id)) % colors.length],
+                life: 24 + Math.floor(Math.random() * 12),
+                maxLife: 36,
+              })
+            }
+          }
+
+          if (fxRaf) cancelAnimationFrame(fxRaf)
+          let life = 40
+          const tick = () => {
+            draw()
+            life -= 1
+            if (life > 0 && fxPieces.length) {
+              fxRaf = requestAnimationFrame(tick)
+            } else {
+              fxPieces = []
+              fxRaf = 0
+              draw()
+            }
+          }
+          fxRaf = requestAnimationFrame(tick)
+        }
+
+        function markCompletedAndReward() {
+          if (state.mode !== MODES.TIME_TRIAL) {
+            const modeMap = state.completedByMode[state.mode] || {}
+            const completionKey = getCompletionKey(state.mode, currentLevelId)
+            if (!modeMap[completionKey]) {
+              modeMap[completionKey] = true
+              state.completedByMode[state.mode] = modeMap
+              const reward = Math.max(
+                5,
+                Math.floor(nodes.length + links.length / 2),
+              )
+              state.coins += reward
+              updateWallet()
+              cta.textContent = `Level cleared. +${reward} coins.`
+            }
+
+            const currentProgress = Number(state.modeProgress[state.mode] || 1)
+            if (currentLevelId >= currentProgress) {
+              const cap = MODE_LEVELS[state.mode]
+              state.modeProgress[state.mode] = Math.min(cap, currentLevelId + 1)
+            }
+          } else {
+            timeTrialScore += 1
+            state.coins += 2 + Math.floor(nodes.length / 2)
+            updateWallet()
+            if (timeTrialScore > state.timeTrialHighScore) {
+              state.timeTrialHighScore = timeTrialScore
+            }
+            updateTopText()
+            updateTimeTrialPanelStats()
+          }
+
+          persistState()
+          renderLevelMenu()
+        }
+
+        function tryWin() {
+          if (won) return
+          updateObjective()
+          if (crossedLinkIds.size !== 0) return
+
+          won = true
+          playVictorySound()
+          spawnWinFx()
+          markCompletedAndReward()
+
+          if (state.mode === MODES.TIME_TRIAL) {
+            cta.textContent = "Solved! Next puzzle loaded automatically."
+            autoAdvanceTimer = setTimeout(() => {
+              if (state.mode !== MODES.TIME_TRIAL || timeTrialSecondsLeft <= 0)
+                return
+              currentLevelId += 1
+              makeCurrentLevel()
+              autoAdvanceTimer = 0
+            }, 500)
+            return
+          }
+
+          cta.textContent = "Level cleared. Auto-advancing..."
+          autoAdvanceTimer = setTimeout(() => {
+            if (!won || state.mode === MODES.TIME_TRIAL) return
+            const max = MODE_LEVELS[state.mode]
+            currentLevelId = currentLevelId >= max ? 1 : currentLevelId + 1
+            makeCurrentLevel()
+            autoAdvanceTimer = 0
+          }, 850)
+        }
+
+        function startTimeTrialLoop() {
+          if (timerRaf) cancelAnimationFrame(timerRaf)
+          const startAt = performance.now()
+          const startSeconds = timeTrialSecondsLeft
+          const frame = (now) => {
+            if (state.mode !== MODES.TIME_TRIAL) return
+            const elapsed = Math.floor((now - startAt) / 1000)
+            const left = Math.max(0, startSeconds - elapsed)
+            timeTrialSecondsLeft = left
+            timerEl.textContent = `Time: ${left}s`
+            updateTimeTrialPanelStats()
+            if (left <= 0) {
+              timerEl.textContent = "Time: 0s"
+              cta.textContent = `Run complete. Score ${timeTrialScore}. Best ${state.timeTrialHighScore}.`
+              won = true
+              if (autoAdvanceTimer) {
+                clearTimeout(autoAdvanceTimer)
+                autoAdvanceTimer = 0
+              }
+              updateTopText()
+              updateTimeTrialPanelStats()
+              showTimeTrialResultMenu()
+              persistState()
+              timerRaf = 0
+              return
+            }
+            timerRaf = requestAnimationFrame(frame)
+          }
+          timerRaf = requestAnimationFrame(frame)
+        }
+
+        function startTimeTrialRun() {
+          hideTimeTrialResultMenu()
+          currentLevelId = 1
+          timeTrialScore = 0
+          timeTrialSecondsLeft = state.timeTrialDurationSeconds
+          timerEl.textContent = `Time: ${timeTrialSecondsLeft}s`
+          won = false
+          startTimeTrialLoop()
+          updateTopText()
+          updateTimeTrialPanelStats()
+          persistState()
+        }
+
+        function toCanvasPos(e) {
+          const rect = canvas.getBoundingClientRect()
+          return {
+            x: ((e.clientX - rect.left) * W) / rect.width,
+            y: ((e.clientY - rect.top) * H) / rect.height,
+          }
+        }
+
+        function setMode(mode) {
+          if (autoAdvanceTimer) {
+            clearTimeout(autoAdvanceTimer)
+            autoAdvanceTimer = 0
+          }
+          state.mode = mode
+          const modeMax =
+            mode === MODES.TIME_TRIAL
+              ? Infinity
+              : Number(MODE_LEVELS[mode] || 1)
+          const savedLevel = Math.max(1, Number(state.modeProgress[mode] || 1))
+          currentLevelId =
+            modeMax === Infinity ? savedLevel : Math.min(savedLevel, modeMax)
+          if (mode === MODES.TIME_TRIAL) {
+            startTimeTrialRun()
+          } else {
+            hideTimeTrialResultMenu()
+            if (timerRaf) cancelAnimationFrame(timerRaf)
+            timerRaf = 0
+            timerEl.textContent = ""
+          }
+
+          for (const tab of document.querySelectorAll(".tab")) {
+            tab.classList.toggle("active", tab.dataset.mode === mode)
+          }
+
+          persistState()
+          makeCurrentLevel()
+        }
+
+        canvas.addEventListener("pointerdown", (e) => {
+          if (menu.style.display !== "none") return
+          if (themeStore.style.display !== "none") return
+          if (timeTrialResult.style.display !== "none") return
+          if (state.mode === MODES.TIME_TRIAL && timeTrialSecondsLeft <= 0)
+            return
+          pointerId = e.pointerId
+          canvas.setPointerCapture(pointerId)
+          const p = toCanvasPos(e)
+          dragIndex = -1
+          for (let i = nodes.length - 1; i >= 0; i--) {
+            const n = nodes[i]
+            const dx = p.x - n.x
+            const dy = p.y - n.y
+            if (dx * dx + dy * dy <= NODE_RADIUS * NODE_RADIUS * 2.2) {
+              dragIndex = i
+              break
+            }
+          }
+        })
+
+        canvas.addEventListener("pointermove", (e) => {
+          if (dragIndex < 0 || e.pointerId !== pointerId) return
+          const p = toCanvasPos(e)
+          nodes[dragIndex].x = Math.max(
+            NODE_RADIUS,
+            Math.min(W - NODE_RADIUS, p.x),
+          )
+          nodes[dragIndex].y = Math.max(
+            NODE_RADIUS,
+            Math.min(H - NODE_RADIUS, p.y),
+          )
+          updateObjective()
+          draw()
+          tryWin()
+        })
+
+        canvas.addEventListener("pointerup", () => {
+          dragIndex = -1
+          pointerId = null
+        })
+
+        canvas.addEventListener("pointercancel", () => {
+          dragIndex = -1
+          pointerId = null
+        })
+
+        restartBtn.onclick = () => {
+          if (state.mode === MODES.TIME_TRIAL && timeTrialSecondsLeft <= 0)
+            return
+          if (autoAdvanceTimer) {
+            clearTimeout(autoAdvanceTimer)
+            autoAdvanceTimer = 0
+          }
+          nodes = deepCloneNodes(startNodes)
+          won = false
+          cta.textContent = "Level reset."
+          updateObjective()
+          draw()
+        }
+
+        settingsBtn.onclick = () => {
+          state.soundEnabled = !state.soundEnabled
+          settingsBtn.textContent = state.soundEnabled
+            ? "Sound On"
+            : "Sound Off"
+          persistState()
+        }
+
+        for (const tab of document.querySelectorAll(".tab")) {
+          tab.addEventListener("click", () => {
+            setMode(tab.dataset.mode)
+            menu.style.display = "none"
+            themeStore.style.display = "none"
+            hideTimeTrialResultMenu()
+          })
+        }
+
+        nodeCountSelect.addEventListener("change", () => {
+          state.classicNodeMenuCount = Number(nodeCountSelect.value)
+          persistState()
+          renderLevelMenu()
+        })
+
+        for (const btn of document.querySelectorAll("#menuBtns button")) {
+          btn.addEventListener("click", () => {
+            const mode = btn.dataset.launch
+            setMode(mode)
+            menu.style.display = "none"
+          })
+        }
+
+        themesBtn.addEventListener("click", () => {
+          renderThemeStore()
+          themeStore.style.display = "flex"
+        })
+
+        closeThemeStoreBtn.addEventListener("click", () => {
+          themeStore.style.display = "none"
+        })
+
+        timeTrialResultRestartBtn.addEventListener("click", () => {
+          hideTimeTrialResultMenu()
+          startTimeTrialRun()
+          makeCurrentLevel()
+        })
+
+        timeTrialResultCloseBtn.addEventListener("click", () => {
+          hideTimeTrialResultMenu()
+          setMode(MODES.CLASSIC)
+          menu.style.display = "none"
+          themeStore.style.display = "none"
+        })
+
+        loadState()
+        applyThemeToDocument()
+        renderThemeStore()
+        setMode(state.mode)
+        draw()
+      })()
+    </script>
+  </body>
+</html>
