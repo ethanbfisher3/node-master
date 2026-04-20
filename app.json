@@ -16,12 +16,12 @@
     "ios": {
       "supportsTablet": true
     },
-    "icon": "./src/images/nodemaster_icon.jpg",
+    "icon": "./src/images/nodemaster_icon_512.jpg",
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#ffffff",
-        "backgroundImage": "./src/images/nodemaster_icon.jpg",
-        "foregroundImage": "./src/images/nodemaster_icon.jpg"
+        "backgroundImage": "./src/images/nodemaster_icon_512.jpg",
+        "foregroundImage": "./src/images/nodemaster_icon_512.jpg"
       },
       "package": "com.ethanbfisher3.node_master"
     },
