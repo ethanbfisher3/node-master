@@ -161,6 +161,7 @@ export default function App() {
   const [popupAdSecondsLeft, setPopupAdSecondsLeft] = useState(
     POPUP_AD_DURATION_SECONDS,
   )
+  const [isNodeDragLocked, setIsNodeDragLocked] = useState(false)
   const [soundEnabled, setSoundEnabled] = useState(
     DEFAULT_SETTINGS.soundEnabled,
   )
@@ -201,6 +202,7 @@ export default function App() {
   const generatedModeLevelsRef = useRef<
     Map<string, { nodes: Node[]; links: Link[] }>
   >(new Map())
+  const activeDragNodeIdsRef = useRef<Set<string>>(new Set())
 
   const levelPacks = useMemo<LevelPack[]>(
     () => createLevelPacks(PRE_GENERATED_LEVELS.length),
@@ -724,6 +726,8 @@ export default function App() {
     setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
     setPendingPopupAdAction(null)
     clearCompletionHold()
+    activeDragNodeIdsRef.current.clear()
+    setIsNodeDragLocked(false)
     setIsLevelComplete(false)
     setView("home")
   }, [clearCompletionHold])
@@ -755,6 +759,8 @@ export default function App() {
       setNodes(normalizedNodes)
       setLinks(nextLinks)
       setLevel(levelId)
+      activeDragNodeIdsRef.current.clear()
+      setIsNodeDragLocked(false)
       setIsLevelComplete(false)
       setPlayMode(mode)
       setView("game")
@@ -982,6 +988,9 @@ export default function App() {
   const handleWin = useCallback(() => {
     clearCompletionHold()
     setIsLevelComplete(true)
+    if (activeDragNodeIdsRef.current.size === 0) {
+      setIsNodeDragLocked(true)
+    }
     playVictorySound()
 
     if (playMode === "time-trial") {
@@ -1148,6 +1157,10 @@ export default function App() {
 
   const handleNodeDrag = useCallback(
     (id: string, x: number, y: number) => {
+      if (isNodeDragLocked) {
+        return
+      }
+
       setNodes((previousNodes) => {
         const nextNode = { id, x, y }
         const nextNodes = previousNodes.map((node) =>
@@ -1157,11 +1170,15 @@ export default function App() {
         return nextNodes
       })
     },
-    [checkIntersections, links],
+    [checkIntersections, isNodeDragLocked, links],
   )
 
   const handleNodeDragEnd = useCallback(
     (id: string, x: number, y: number) => {
+      if (isNodeDragLocked) {
+        return
+      }
+
       setNodes((previousNodes) => {
         const snappedNode = resolveNodePositionImmediate(
           id,
@@ -1177,8 +1194,34 @@ export default function App() {
         checkIntersections(nextNodes, links)
         return nextNodes
       })
+
+      if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
+        setIsNodeDragLocked(true)
+      }
     },
-    [checkIntersections, links],
+    [checkIntersections, isLevelComplete, isNodeDragLocked, links],
+  )
+
+  const handleNodeDragStart = useCallback(
+    (id: string) => {
+      if (isNodeDragLocked) {
+        return
+      }
+
+      activeDragNodeIdsRef.current.add(id)
+    },
+    [isNodeDragLocked],
+  )
+
+  const handleNodeDragFinalize = useCallback(
+    (id: string) => {
+      activeDragNodeIdsRef.current.delete(id)
+
+      if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
+        setIsNodeDragLocked(true)
+      }
+    },
+    [isLevelComplete],
   )
 
   const handleRestart = useCallback(() => {
@@ -1581,6 +1624,7 @@ export default function App() {
           links={links}
           intersectingLinks={intersectingLinks}
           isLevelComplete={isLevelComplete}
+          isNodeDragLocked={isNodeDragLocked}
           trialTimeLeftSeconds={
             playMode === "time-trial"
               ? timeTrialState.timeLeftSeconds
@@ -1603,6 +1647,8 @@ export default function App() {
           onRestart={withMenuClickSound(handleRestart)}
           onNodeDrag={handleNodeDrag}
           onNodeDragEnd={handleNodeDragEnd}
+          onNodeDragStart={handleNodeDragStart}
+          onNodeDragFinalize={handleNodeDragFinalize}
         />
       )}
 
@@ -1636,25 +1682,27 @@ export default function App() {
 
       {shouldEnableAds && !noAdsOwned && <BannerAdSlot />}
 
-      <Modal transparent visible={popupAdVisible} animationType="fade">
-        <View style={styles.popupAdOverlay}>
-          <View style={styles.popupAdCard}>
-            <Text style={styles.popupAdTag}>Example Video Ad</Text>
-            <Text style={styles.popupAdTitle}>
-              Your sponsor message goes here
-            </Text>
-            <Text style={styles.popupAdBody}>
-              This is a placeholder for a future popup video ad.
-            </Text>
-            <View style={styles.popupAdVideoFrame}>
-              <View style={styles.popupAdPlayButton} />
+      {__DEV__ && (
+        <Modal transparent visible={popupAdVisible} animationType="fade">
+          <View style={styles.popupAdOverlay}>
+            <View style={styles.popupAdCard}>
+              <Text style={styles.popupAdTag}>Example Video Ad</Text>
+              <Text style={styles.popupAdTitle}>
+                Your sponsor message goes here
+              </Text>
+              <Text style={styles.popupAdBody}>
+                This is a placeholder for a future popup video ad.
+              </Text>
+              <View style={styles.popupAdVideoFrame}>
+                <View style={styles.popupAdPlayButton} />
+              </View>
+              <Text style={styles.popupAdCountdown}>
+                Closing in {popupAdSecondsLeft}s
+              </Text>
             </View>
-            <Text style={styles.popupAdCountdown}>
-              Closing in {popupAdSecondsLeft}s
-            </Text>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      )}
       {/* </SafeAreaView> */}
     </GestureHandlerRootView>
   )
