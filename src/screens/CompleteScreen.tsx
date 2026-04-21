@@ -1,6 +1,6 @@
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { ChevronLeft, ChevronRight, Coins, Trophy } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Trophy } from "lucide-react-native";
 
 import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import { styles } from "../styles";
@@ -21,9 +21,9 @@ export function CompleteScreen({
   onNextLevel,
 }: CompleteScreenProps) {
   const activeTheme = theme ?? DEFAULT_APP_THEME;
-  const baseReward = 5;
-  const nodeBonus = nodeCount;
-  const totalReward = baseReward + nodeBonus;
+  // const baseReward = 5;
+  // const nodeBonus = nodeCount;
+  // const totalReward = baseReward + nodeBonus;
 
   return (
     <View
@@ -51,7 +51,7 @@ export function CompleteScreen({
         Level {level} completed
       </Text>
 
-      <View
+      {/* <View
         style={[styles.rewardCard, { backgroundColor: activeTheme.surface }]}
       >
         <View style={styles.rewardRow}>
@@ -87,7 +87,7 @@ export function CompleteScreen({
             <Text style={styles.rewardTotalValue}>{totalReward}</Text>
           </View>
         </View>
-      </View>
+      </View> */}
 
       <View style={styles.completeButtonsRow}>
         <TouchableOpacity

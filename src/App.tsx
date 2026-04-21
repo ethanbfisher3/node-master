@@ -1,4 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   Modal,
   StatusBar,
@@ -7,41 +13,41 @@ import {
   Platform,
   Alert,
   Image,
-} from "react-native"
-import { GestureHandlerRootView } from "react-native-gesture-handler"
-import { Audio } from "expo-av"
-import Purchases, { LOG_LEVEL } from "react-native-purchases"
-import { PRE_GENERATED_LEVELS } from "./data/levels"
-import { CompleteScreen } from "./screens/CompleteScreen"
-import { GameScreen } from "./screens/GameScreen"
-import { HomeScreen } from "./screens/HomeScreen"
-import { LevelPackScreen } from "./screens/LevelPackScreen"
-import { LevelsScreen } from "./screens/LevelsScreen"
-import { AdminScreen } from "./screens/AdminScreen"
-import { StoreScreen } from "./screens/StoreScreen"
-import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen"
-import { TimeTrialScreen } from "./screens/TimeTrialScreen"
-import { SettingsScreen } from "./screens/SettingsScreen"
-import { BannerAdSlot } from "./components/BannerAdSlot"
-import Constants from "expo-constants"
+  PanResponder,
+} from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { Audio } from "expo-av";
+import Purchases, { LOG_LEVEL } from "react-native-purchases";
+import { PRE_GENERATED_LEVELS } from "./data/levels";
+import { CompleteScreen } from "./screens/CompleteScreen";
+import { GameScreen } from "./screens/GameScreen";
+import { HomeScreen } from "./screens/HomeScreen";
+import { LevelPackScreen } from "./screens/LevelPackScreen";
+import { LevelsScreen } from "./screens/LevelsScreen";
+import { AdminScreen } from "./screens/AdminScreen";
+import { StoreScreen } from "./screens/StoreScreen";
+import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen";
+import { TimeTrialScreen } from "./screens/TimeTrialScreen";
+import { SettingsScreen } from "./screens/SettingsScreen";
+import { BannerAdSlot } from "./components/BannerAdSlot";
+import Constants from "expo-constants";
 import cosmetics, {
   AppThemePalette,
   Cosmetic,
   THEME_PACKS,
   ThemePack,
   resolveAppTheme,
-} from "./data/cosmetics"
-import { createLevelPacks, LevelPack } from "./data/levelPacks"
-import { GAME_HEIGHT, GAME_WIDTH, styles } from "./styles"
+} from "./data/cosmetics";
+import { createLevelPacks, LevelPack } from "./data/levelPacks";
+import { GAME_HEIGHT, GAME_WIDTH, styles } from "./styles";
 import {
-  generateLevel,
   Link,
   Node,
   normalizeNodePositions,
   resolveNodePositionImmediate,
-} from "./utils/gameLogic"
-import { CoinPack } from "./data/coinPacks"
-import { DEFAULT_SETTINGS, readSettings } from "./utils/settings"
+} from "./utils/gameLogic";
+import { CoinPack } from "./data/coinPacks";
+import { DEFAULT_SETTINGS, readSettings } from "./utils/settings";
 import {
   DAILY_LEVEL_IDS,
   DEFAULT_CLASSIC_PACK_ID,
@@ -56,14 +62,13 @@ import {
   POPUP_AD_DURATION_SECONDS,
   SOLVED_HOLD_DURATION_MS,
   WEEKLY_LEVEL_IDS,
-} from "./app/constants"
+} from "./app/constants";
 import {
   findRevenueCatPackageByIdentifiers,
-  resolveCoinPackPriceLabels,
   resolveLevelPackPriceLabels,
   resolveLocalizedPriceLabel,
   resolveThemePackPriceLabels,
-} from "./app/revenueCat"
+} from "./app/revenueCat";
 import {
   classicPackCompletionKey,
   completionKey,
@@ -72,10 +77,10 @@ import {
   readPlayerProgress,
   writePlayerProgress,
   type CompletionMode,
-  type PersistedPlayerProgress,
-} from "./app/progress"
-import { getIntersectingLinkIds } from "./app/levelIntersections"
-import { generateLevelForMode } from "./app/levelGeneration"
+} from "./app/progress";
+import { getIntersectingLinkIds } from "./app/levelIntersections";
+import { generateLevelForMode } from "./app/levelGeneration";
+import { TestIds } from "react-native-google-mobile-ads";
 
 export type ViewType =
   | "home"
@@ -88,100 +93,90 @@ export type ViewType =
   | "game"
   | "complete"
   | "time-trial-result"
-  | "settings"
+  | "settings";
 
-type PlayMode = "classic" | "daily" | "weekly" | "time-trial"
+type PlayMode = "classic" | "daily" | "weekly" | "time-trial";
 
-type TrialDuration = 30 | 60 | 120
+type TrialDuration = 30 | 60 | 120;
 
-const LEVEL_COMPLETE_CELEBRATION_DELAY_MS = 1100
-const VIDEO_AD_LOAD_TIMEOUT_MS = 5000
-const TEST_VIDEO_AD_UNIT_ID = Platform.select({
-  android: "ca-app-pub-3940256099942544/1033173712",
-  ios: "ca-app-pub-3940256099942544/4411468910",
-  default: null,
-})
-const envVideoAdUnitId =
-  Platform.OS === "android"
-    ? (process.env.EXPO_PUBLIC_ADMOB_VIDEO_AD_ID_ANDROID ??
-      process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_AD_ID_ANDROID ??
-      process.env.EXPO_PUBLIC_ADMOB_REWARDED_INTERSTITIAL_AD_ID_ANDROID)
+const LEVEL_COMPLETE_CELEBRATION_DELAY_MS = 1100;
+const VIDEO_AD_LOAD_TIMEOUT_MS = 5000;
+const EDGE_SWIPE_START_WIDTH = 28;
+const EDGE_SWIPE_TRIGGER_DISTANCE = 72;
+const videoAdUnitId = __DEV__
+  ? TestIds.NATIVE_VIDEO
+  : Platform.OS === "android"
+    ? "ca-app-pub-9592701510571371/3130606158"
     : Platform.OS === "ios"
-      ? (process.env.EXPO_PUBLIC_ADMOB_VIDEO_AD_ID_IOS ??
-        process.env.EXPO_PUBLIC_ADMOB_INTERSTITIAL_AD_ID_IOS ??
-        process.env.EXPO_PUBLIC_ADMOB_REWARDED_INTERSTITIAL_AD_ID_IOS)
-      : null
-const videoAdUnitId = __DEV__ ? TEST_VIDEO_AD_UNIT_ID : envVideoAdUnitId
+      ? "ca-app-pub-9592701510571371/8885936656"
+      : null;
 
 type TimeTrialState = {
-  nodeCount: number | null
-  durationSeconds: TrialDuration
-  timeLeftSeconds: number
-  active: boolean
-  solvedCount: number
-  earnedCoins: number
-}
+  nodeCount: number | null;
+  durationSeconds: TrialDuration;
+  timeLeftSeconds: number;
+  active: boolean;
+  solvedCount: number;
+  earnedCoins: number;
+};
 
 export default function App() {
-  const isExpoGo = Constants.executionEnvironment === "storeClient"
-  const shouldEnableAds = !isExpoGo
-  const [view, setView] = useState<ViewType>("home")
-  const [playMode, setPlayMode] = useState<PlayMode>("classic")
-  const [level, setLevel] = useState(1)
-  const [coins, setCoins] = useState(1000)
-  const [noAdsOwned, setNoAdsOwned] = useState(false)
+  const isExpoGo = Constants.executionEnvironment === "storeClient";
+  const shouldEnableAds = !isExpoGo;
+  const [view, setView] = useState<ViewType>("home");
+  const [playMode, setPlayMode] = useState<PlayMode>("classic");
+  const [level, setLevel] = useState(1);
+  const [coins, setCoins] = useState(1000);
+  const [noAdsOwned, setNoAdsOwned] = useState(false);
   const [purchasedStoreItemIds, setPurchasedStoreItemIds] = useState<
     Set<string>
-  >(new Set())
+  >(new Set());
   const [equippedThemeCosmeticId, setEquippedThemeCosmeticId] = useState<
     string | null
-  >(null)
+  >(null);
   const [selectedLevelPackId, setSelectedLevelPackId] = useState<string | null>(
     null,
-  )
+  );
   const [completedLevelKeys, setCompletedLevelKeys] = useState<Set<string>>(
     new Set(),
-  )
-  const [nodes, setNodes] = useState<Node[]>([])
-  const [links, setLinks] = useState<Link[]>([])
+  );
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [links, setLinks] = useState<Link[]>([]);
   const [intersectingLinks, setIntersectingLinks] = useState<Set<string>>(
     new Set(),
-  )
-  const [isLevelComplete, setIsLevelComplete] = useState(false)
-  const [completedLevelsCount, setCompletedLevelsCount] = useState(0)
+  );
+  const [isLevelComplete, setIsLevelComplete] = useState(false);
+  const [completedLevelsCount, setCompletedLevelsCount] = useState(0);
   const [levelsSinceLastInterstitialAd, setLevelsSinceLastInterstitialAd] =
-    useState(0)
+    useState(0);
   const [lastInterstitialAdAt, setLastInterstitialAdAt] = useState<
     number | null
-  >(null)
-  const [isProgressHydrated, setIsProgressHydrated] = useState(false)
-  const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([])
-  const [sessionIndex, setSessionIndex] = useState(0)
-  const [popupAdVisible, setPopupAdVisible] = useState(false)
+  >(null);
+  const [isProgressHydrated, setIsProgressHydrated] = useState(false);
+  const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([]);
+  const [sessionIndex, setSessionIndex] = useState(0);
+  const [popupAdVisible, setPopupAdVisible] = useState(false);
   const [popupAdSecondsLeft, setPopupAdSecondsLeft] = useState(
     POPUP_AD_DURATION_SECONDS,
-  )
-  const [isNodeDragLocked, setIsNodeDragLocked] = useState(false)
+  );
+  const [isNodeDragLocked, setIsNodeDragLocked] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(
     DEFAULT_SETTINGS.soundEnabled,
-  )
-  const [coinPackPriceLabels, setCoinPackPriceLabels] = useState<
-    Record<string, string>
-  >({})
+  );
   const [levelPackPriceLabels, setLevelPackPriceLabels] = useState<
     Record<string, string>
-  >({})
+  >({});
   const [themePackPriceLabels, setThemePackPriceLabels] = useState<
     Record<string, string>
-  >({})
-  const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null)
-  const [purchaseCelebrationToken, setPurchaseCelebrationToken] = useState(0)
+  >({});
+  const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null);
+  const [purchaseCelebrationToken, setPurchaseCelebrationToken] = useState(0);
   const [pendingPopupAdAction, setPendingPopupAdAction] = useState<
     (() => void) | null
-  >(null)
+  >(null);
   const [adsModule, setAdsModule] = useState<
     typeof import("react-native-google-mobile-ads") | null
-  >(null)
+  >(null);
   const [timeTrialState, setTimeTrialState] = useState<TimeTrialState>({
     nodeCount: null,
     durationSeconds: 30,
@@ -189,25 +184,25 @@ export default function App() {
     active: false,
     solvedCount: 0,
     earnedCoins: 0,
-  })
+  });
   const completionHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
-  )
-  const menuClickSoundRef = useRef<Audio.Sound | null>(null)
-  const isMenuClickSoundLoadingRef = useRef(false)
-  const themeChangeSoundRef = useRef<Audio.Sound | null>(null)
-  const isThemeChangeSoundLoadingRef = useRef(false)
-  const victorySoundRef = useRef<Audio.Sound | null>(null)
-  const isVictorySoundLoadingRef = useRef(false)
+  );
+  const menuClickSoundRef = useRef<Audio.Sound | null>(null);
+  const isMenuClickSoundLoadingRef = useRef(false);
+  const themeChangeSoundRef = useRef<Audio.Sound | null>(null);
+  const isThemeChangeSoundLoadingRef = useRef(false);
+  const victorySoundRef = useRef<Audio.Sound | null>(null);
+  const isVictorySoundLoadingRef = useRef(false);
   const generatedModeLevelsRef = useRef<
     Map<string, { nodes: Node[]; links: Link[] }>
-  >(new Map())
-  const activeDragNodeIdsRef = useRef<Set<string>>(new Set())
+  >(new Map());
+  const activeDragNodeIdsRef = useRef<Set<string>>(new Set());
 
   const levelPacks = useMemo<LevelPack[]>(
     () => createLevelPacks(PRE_GENERATED_LEVELS.length),
     [],
-  )
+  );
 
   const levelPacksWithOwnership = useMemo(
     () =>
@@ -220,194 +215,201 @@ export default function App() {
             : false),
       })),
     [levelPacks, purchasedStoreItemIds],
-  )
+  );
 
   const selectedLevelPack = useMemo(() => {
     if (!levelPacksWithOwnership.length) {
-      return null
+      return null;
     }
 
     const explicit = levelPacksWithOwnership.find(
       (pack) => pack.id === selectedLevelPackId,
-    )
+    );
     if (explicit) {
-      return explicit
+      return explicit;
     }
 
-    return levelPacksWithOwnership.find((pack) => pack.owned) ?? null
-  }, [levelPacksWithOwnership, selectedLevelPackId])
+    return levelPacksWithOwnership.find((pack) => pack.owned) ?? null;
+  }, [levelPacksWithOwnership, selectedLevelPackId]);
 
   const requiredNodeCountByLevelId = useMemo(() => {
-    const byLevelId = new Map<number, number>()
+    const byLevelId = new Map<number, number>();
     for (const levelEntry of PRE_GENERATED_LEVELS) {
-      byLevelId.set(levelEntry.id, levelEntry.nodes.length)
+      byLevelId.set(levelEntry.id, levelEntry.nodes.length);
     }
-    return byLevelId
-  }, [])
+    return byLevelId;
+  }, []);
 
   useEffect(() => {
     if (!shouldEnableAds) {
-      setAdsModule(null)
-      return
+      setAdsModule(null);
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const initializeAds = async () => {
       try {
-        const module = await import("react-native-google-mobile-ads")
-        const { default: MobileAds } = module
+        const module = await import("react-native-google-mobile-ads");
+        const { default: MobileAds } = module;
 
         if (cancelled) {
-          return
+          return;
         }
 
-        setAdsModule(module)
+        setAdsModule(module);
 
-        const adapterStatuses = await MobileAds().initialize()
-        console.log("Mobile Ads initialized:", adapterStatuses)
+        const adapterStatuses = await MobileAds().initialize();
+        console.log("Mobile Ads initialized:", adapterStatuses);
       } catch (error) {
         if (!cancelled) {
-          setAdsModule(null)
+          setAdsModule(null);
         }
-        console.warn("Failed to initialize Mobile Ads:", error)
+        console.warn("Failed to initialize Mobile Ads:", error);
       }
-    }
+    };
 
-    void initializeAds()
+    void initializeAds();
 
     return () => {
-      cancelled = true
-    }
-  }, [shouldEnableAds])
+      cancelled = true;
+    };
+  }, [shouldEnableAds]);
 
   useEffect(() => {
-    Purchases.setLogLevel(LOG_LEVEL.VERBOSE)
-    if (Platform.OS === "ios") {
-      Purchases.configure({
-        apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS,
-      })
-    } else if (Platform.OS === "android") {
-      Purchases.configure({
-        apiKey: process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID,
-      })
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+    const revenueCatApiKey = isExpoGo
+      ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_TEST
+      : Platform.OS === "ios"
+        ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_IOS
+        : Platform.OS === "android"
+          ? process.env.EXPO_PUBLIC_REVENUECAT_API_KEY_ANDROID
+          : undefined;
+
+    if (!revenueCatApiKey) {
+      console.warn(
+        "RevenueCat API key is missing for the current environment/platform.",
+      );
+      return;
     }
 
-    console.log("Purchases configured")
-  }, [])
+    Purchases.configure({
+      apiKey: revenueCatApiKey,
+    });
+
+    console.log("Purchases configured");
+  }, [isExpoGo]);
 
   useEffect(() => {
     if (Platform.OS !== "ios" && Platform.OS !== "android") {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
-    const loadCoinPackPriceLabels = async () => {
+    const loadStorePriceLabels = async () => {
       try {
-        const offerings = await Purchases.getOfferings()
+        const offerings = await Purchases.getOfferings();
         if (cancelled) {
-          return
+          return;
         }
 
-        setCoinPackPriceLabels(resolveCoinPackPriceLabels(offerings))
         setLevelPackPriceLabels(
           resolveLevelPackPriceLabels(levelPacks, offerings),
-        )
-        setThemePackPriceLabels(resolveThemePackPriceLabels(offerings))
+        );
+        setThemePackPriceLabels(resolveThemePackPriceLabels(offerings));
         setNoAdsPriceLabel(
           resolveLocalizedPriceLabel(offerings, NO_ADS_REVENUECAT_ID),
-        )
+        );
       } catch {
         if (!cancelled) {
-          setCoinPackPriceLabels({})
-          setLevelPackPriceLabels({})
-          setThemePackPriceLabels({})
-          setNoAdsPriceLabel(null)
+          setLevelPackPriceLabels({});
+          setThemePackPriceLabels({});
+          setNoAdsPriceLabel(null);
         }
       }
-    }
+    };
 
-    void loadCoinPackPriceLabels()
+    void loadStorePriceLabels();
 
     return () => {
-      cancelled = true
-    }
-  }, [levelPacks])
+      cancelled = true;
+    };
+  }, [levelPacks]);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const hydrateProgress = async () => {
-      const progress = await readPlayerProgress()
+      const progress = await readPlayerProgress();
       if (cancelled) {
-        return
+        return;
       }
 
-      setLevel(progress.level)
-      setCoins(progress.coins)
-      setNoAdsOwned(progress.noAdsOwned)
-      setPurchasedStoreItemIds(new Set(progress.purchasedStoreItemIds))
-      setEquippedThemeCosmeticId(progress.equippedThemeCosmeticId)
-      setCompletedLevelKeys(new Set(progress.completedLevelKeys))
-      setCompletedLevelsCount(progress.completedLevelsCount)
-      setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd)
-      setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now())
-      setIsProgressHydrated(true)
-    }
+      setLevel(progress.level);
+      setCoins(progress.coins);
+      setNoAdsOwned(progress.noAdsOwned);
+      setPurchasedStoreItemIds(new Set(progress.purchasedStoreItemIds));
+      setEquippedThemeCosmeticId(progress.equippedThemeCosmeticId);
+      setCompletedLevelKeys(new Set(progress.completedLevelKeys));
+      setCompletedLevelsCount(progress.completedLevelsCount);
+      setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd);
+      setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now());
+      setIsProgressHydrated(true);
+    };
 
-    void hydrateProgress()
+    void hydrateProgress();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    let cancelled = false
+    let cancelled = false;
 
     const hydrateSettings = async () => {
-      const nextSettings = await readSettings()
+      const nextSettings = await readSettings();
       if (cancelled) {
-        return
+        return;
       }
 
-      setSoundEnabled(nextSettings.soundEnabled)
-    }
+      setSoundEnabled(nextSettings.soundEnabled);
+    };
 
-    void hydrateSettings()
+    void hydrateSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [])
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (view === "settings") {
-      return
+      return;
     }
 
-    let cancelled = false
+    let cancelled = false;
 
     const syncSettings = async () => {
-      const nextSettings = await readSettings()
+      const nextSettings = await readSettings();
       if (cancelled) {
-        return
+        return;
       }
 
-      setSoundEnabled(nextSettings.soundEnabled)
-    }
+      setSoundEnabled(nextSettings.soundEnabled);
+    };
 
-    void syncSettings()
+    void syncSettings();
 
     return () => {
-      cancelled = true
-    }
-  }, [view])
+      cancelled = true;
+    };
+  }, [view]);
 
   useEffect(() => {
     if (!isProgressHydrated) {
-      return
+      return;
     }
 
     void writePlayerProgress({
@@ -420,7 +422,7 @@ export default function App() {
       completedLevelsCount,
       levelsSinceLastInterstitialAd,
       lastInterstitialAdAt,
-    })
+    });
   }, [
     coins,
     completedLevelKeys,
@@ -432,16 +434,16 @@ export default function App() {
     purchasedStoreItemIds,
     lastInterstitialAdAt,
     levelsSinceLastInterstitialAd,
-  ])
+  ]);
 
   const appTheme = useMemo<AppThemePalette>(
     () => resolveAppTheme(equippedThemeCosmeticId),
     [equippedThemeCosmeticId],
-  )
+  );
 
-  const activeClassicPackId = selectedLevelPack?.id ?? DEFAULT_CLASSIC_PACK_ID
+  const activeClassicPackId = selectedLevelPack?.id ?? DEFAULT_CLASSIC_PACK_ID;
   const isReverseClassicPackActive =
-    playMode === "classic" && activeClassicPackId === REVERSE_LEVEL_PACK_ID
+    playMode === "classic" && activeClassicPackId === REVERSE_LEVEL_PACK_ID;
 
   const completedClassicLevelIds = useMemo(
     () =>
@@ -450,42 +452,42 @@ export default function App() {
         activeClassicPackId,
       ),
     [activeClassicPackId, completedLevelKeys],
-  )
+  );
 
   const completedDailyLevelIds = useMemo(
     () => getCompletedLevelIdsForMode(completedLevelKeys, "daily"),
     [completedLevelKeys],
-  )
+  );
 
   const completedWeeklyLevelIds = useMemo(
     () => getCompletedLevelIdsForMode(completedLevelKeys, "weekly"),
     [completedLevelKeys],
-  )
+  );
 
   const clearCompletionHold = useCallback(() => {
     if (!completionHoldTimeoutRef.current) {
-      return
+      return;
     }
 
-    clearTimeout(completionHoldTimeoutRef.current)
-    completionHoldTimeoutRef.current = null
-  }, [])
+    clearTimeout(completionHoldTimeoutRef.current);
+    completionHoldTimeoutRef.current = null;
+  }, []);
 
   useEffect(() => {
     return () => {
-      clearCompletionHold()
-    }
-  }, [clearCompletionHold])
+      clearCompletionHold();
+    };
+  }, [clearCompletionHold]);
 
   useEffect(() => {
     if (!soundEnabled) {
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-      return
+      void menuClickSoundRef.current?.unloadAsync();
+      menuClickSoundRef.current = null;
+      return;
     }
 
-    let cancelled = false
-    isMenuClickSoundLoadingRef.current = true
+    let cancelled = false;
+    isMenuClickSoundLoadingRef.current = true;
 
     const preloadMenuClickSound = async () => {
       try {
@@ -494,7 +496,7 @@ export default function App() {
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
-        })
+        });
 
         const { sound } = await Audio.Sound.createAsync(
           require("./sounds/button_click.mp3"),
@@ -502,67 +504,67 @@ export default function App() {
             shouldPlay: false,
             volume: 0.55,
           },
-        )
+        );
 
         if (cancelled) {
-          await sound.unloadAsync()
-          return
+          await sound.unloadAsync();
+          return;
         }
 
-        await menuClickSoundRef.current?.unloadAsync()
-        menuClickSoundRef.current = sound
+        await menuClickSoundRef.current?.unloadAsync();
+        menuClickSoundRef.current = sound;
       } catch {
         if (!cancelled) {
-          menuClickSoundRef.current = null
+          menuClickSoundRef.current = null;
         }
       } finally {
-        isMenuClickSoundLoadingRef.current = false
+        isMenuClickSoundLoadingRef.current = false;
       }
-    }
+    };
 
-    void preloadMenuClickSound()
+    void preloadMenuClickSound();
 
     return () => {
-      cancelled = true
-      isMenuClickSoundLoadingRef.current = false
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-    }
-  }, [soundEnabled])
+      cancelled = true;
+      isMenuClickSoundLoadingRef.current = false;
+      void menuClickSoundRef.current?.unloadAsync();
+      menuClickSoundRef.current = null;
+    };
+  }, [soundEnabled]);
 
   const playMenuClickSound = useCallback(() => {
     if (!soundEnabled || isMenuClickSoundLoadingRef.current) {
-      return
+      return;
     }
 
-    const currentSound = menuClickSoundRef.current
+    const currentSound = menuClickSoundRef.current;
     if (!currentSound) {
-      return
+      return;
     }
 
     void currentSound.replayAsync().catch(() => {
       // Ignore playback errors to keep navigation responsive.
-    })
-  }, [soundEnabled])
+    });
+  }, [soundEnabled]);
 
   const withMenuClickSound = useCallback(
     <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
       (...args: TArgs) => {
-        playMenuClickSound()
-        callback(...args)
+        playMenuClickSound();
+        callback(...args);
       },
     [playMenuClickSound],
-  )
+  );
 
   useEffect(() => {
     if (!soundEnabled) {
-      void themeChangeSoundRef.current?.unloadAsync()
-      themeChangeSoundRef.current = null
-      return
+      void themeChangeSoundRef.current?.unloadAsync();
+      themeChangeSoundRef.current = null;
+      return;
     }
 
-    let cancelled = false
-    isThemeChangeSoundLoadingRef.current = true
+    let cancelled = false;
+    isThemeChangeSoundLoadingRef.current = true;
 
     const preloadThemeChangeSound = async () => {
       try {
@@ -572,67 +574,67 @@ export default function App() {
             shouldPlay: false,
             volume: 0.6,
           },
-        )
+        );
 
         if (cancelled) {
-          await sound.unloadAsync()
-          return
+          await sound.unloadAsync();
+          return;
         }
 
-        await themeChangeSoundRef.current?.unloadAsync()
-        themeChangeSoundRef.current = sound
+        await themeChangeSoundRef.current?.unloadAsync();
+        themeChangeSoundRef.current = sound;
       } catch {
         if (!cancelled) {
-          themeChangeSoundRef.current = null
+          themeChangeSoundRef.current = null;
         }
       } finally {
-        isThemeChangeSoundLoadingRef.current = false
+        isThemeChangeSoundLoadingRef.current = false;
       }
-    }
+    };
 
-    void preloadThemeChangeSound()
+    void preloadThemeChangeSound();
 
     return () => {
-      cancelled = true
-      isThemeChangeSoundLoadingRef.current = false
-      void themeChangeSoundRef.current?.unloadAsync()
-      themeChangeSoundRef.current = null
-    }
-  }, [soundEnabled])
+      cancelled = true;
+      isThemeChangeSoundLoadingRef.current = false;
+      void themeChangeSoundRef.current?.unloadAsync();
+      themeChangeSoundRef.current = null;
+    };
+  }, [soundEnabled]);
 
   const playThemeChangeSound = useCallback(() => {
     if (!soundEnabled || isThemeChangeSoundLoadingRef.current) {
-      return
+      return;
     }
 
-    const currentSound = themeChangeSoundRef.current
+    const currentSound = themeChangeSoundRef.current;
     if (!currentSound) {
-      return
+      return;
     }
 
     void currentSound.replayAsync().catch(() => {
       // Ignore playback errors to keep UI interaction responsive.
-    })
-  }, [soundEnabled])
+    });
+  }, [soundEnabled]);
 
   const withThemeChangeSound = useCallback(
     <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
       (...args: TArgs) => {
-        playThemeChangeSound()
-        callback(...args)
+        playThemeChangeSound();
+        callback(...args);
       },
     [playThemeChangeSound],
-  )
+  );
 
   useEffect(() => {
     if (!soundEnabled) {
-      void victorySoundRef.current?.unloadAsync()
-      victorySoundRef.current = null
-      return
+      void victorySoundRef.current?.unloadAsync();
+      victorySoundRef.current = null;
+      return;
     }
 
-    let cancelled = false
-    isVictorySoundLoadingRef.current = true
+    let cancelled = false;
+    isVictorySoundLoadingRef.current = true;
 
     const preloadVictorySound = async () => {
       try {
@@ -641,7 +643,7 @@ export default function App() {
           staysActiveInBackground: false,
           shouldDuckAndroid: true,
           playThroughEarpieceAndroid: false,
-        })
+        });
 
         const { sound } = await Audio.Sound.createAsync(
           require("./sounds/victory.mp3"),
@@ -649,71 +651,71 @@ export default function App() {
             shouldPlay: false,
             volume: 0.7,
           },
-        )
+        );
 
         if (cancelled) {
-          await sound.unloadAsync()
-          return
+          await sound.unloadAsync();
+          return;
         }
 
-        await victorySoundRef.current?.unloadAsync()
-        victorySoundRef.current = sound
+        await victorySoundRef.current?.unloadAsync();
+        victorySoundRef.current = sound;
       } catch {
         if (!cancelled) {
-          victorySoundRef.current = null
+          victorySoundRef.current = null;
         }
       } finally {
-        isVictorySoundLoadingRef.current = false
+        isVictorySoundLoadingRef.current = false;
       }
-    }
+    };
 
-    void preloadVictorySound()
+    void preloadVictorySound();
 
     return () => {
-      cancelled = true
-      isVictorySoundLoadingRef.current = false
-      void victorySoundRef.current?.unloadAsync()
-      victorySoundRef.current = null
-    }
-  }, [soundEnabled])
+      cancelled = true;
+      isVictorySoundLoadingRef.current = false;
+      void victorySoundRef.current?.unloadAsync();
+      victorySoundRef.current = null;
+    };
+  }, [soundEnabled]);
 
   const playVictorySound = useCallback(() => {
     if (!soundEnabled || isVictorySoundLoadingRef.current) {
-      return
+      return;
     }
 
-    const currentSound = victorySoundRef.current
+    const currentSound = victorySoundRef.current;
     if (!currentSound) {
-      console.warn("Victory sound not loaded")
-      return
+      console.warn("Victory sound not loaded");
+      return;
     }
 
     void currentSound
       .stopAsync()
       .then(() => {
-        void currentSound.playAsync().catch(() => {})
+        void currentSound.playAsync().catch(() => {});
       })
-      .catch(() => {})
-  }, [soundEnabled])
+      .catch(() => {});
+  }, [soundEnabled]);
 
   const handleRestoreAppInfo = useCallback(() => {
     if (!__DEV__) {
-      return
+      return;
     }
 
-    setLevel(1)
-    setCoins(0)
-    setNoAdsOwned(false)
-    setPurchasedStoreItemIds(new Set<string>())
-    setEquippedThemeCosmeticId(null)
-    setSelectedLevelPackId(null)
-    setCompletedLevelKeys(new Set<string>())
-    setCompletedLevelsCount(0)
-    setLevelsSinceLastInterstitialAd(0)
-    setLastInterstitialAdAt(Date.now())
-    setSessionLevelIds([])
-    setSessionIndex(0)
-    generatedModeLevelsRef.current.clear()
+    setLevel(1);
+    setCoins(0);
+    setNoAdsOwned(false);
+    setPurchasedStoreItemIds(new Set<string>());
+    setEquippedThemeCosmeticId(null);
+    setSelectedLevelPackId(null);
+    setCompletedLevelKeys(new Set<string>());
+    setCompletedLevelsCount(0);
+    setLevelsSinceLastInterstitialAd(0);
+    setLastInterstitialAdAt(Date.now());
+    setSessionLevelIds([]);
+    setSessionIndex(0);
+    generatedModeLevelsRef.current.clear();
     setTimeTrialState({
       nodeCount: null,
       durationSeconds: 30,
@@ -721,21 +723,21 @@ export default function App() {
       active: false,
       solvedCount: 0,
       earnedCoins: 0,
-    })
-    setPopupAdVisible(false)
-    setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-    setPendingPopupAdAction(null)
-    clearCompletionHold()
-    activeDragNodeIdsRef.current.clear()
-    setIsNodeDragLocked(false)
-    setIsLevelComplete(false)
-    setView("home")
-  }, [clearCompletionHold])
+    });
+    setPopupAdVisible(false);
+    setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+    setPendingPopupAdAction(null);
+    clearCompletionHold();
+    activeDragNodeIdsRef.current.clear();
+    setIsNodeDragLocked(false);
+    setIsLevelComplete(false);
+    setView("home");
+  }, [clearCompletionHold]);
 
   const loadLevel = useCallback(
     (levelId: number, mode: PlayMode, forcedTimeTrialNodeCount?: number) => {
-      clearCompletionHold()
-      const requiredNodeCount = requiredNodeCountByLevelId.get(levelId)
+      clearCompletionHold();
+      const requiredNodeCount = requiredNodeCountByLevelId.get(levelId);
       const generatedLevel = generateLevelForMode({
         levelId,
         mode,
@@ -746,25 +748,25 @@ export default function App() {
         forcedTimeTrialNodeCount,
         timeTrialNodeCount: timeTrialState.nodeCount,
         requiredNodeCount,
-      })
+      });
 
-      const nextNodes = generatedLevel.nodes
-      const nextLinks = generatedLevel.links
+      const nextNodes = generatedLevel.nodes;
+      const nextLinks = generatedLevel.links;
 
       const normalizedNodes =
         mode === "time-trial"
           ? nextNodes
-          : normalizeNodePositions(nextNodes, GAME_WIDTH, GAME_HEIGHT)
+          : normalizeNodePositions(nextNodes, GAME_WIDTH, GAME_HEIGHT);
 
-      setNodes(normalizedNodes)
-      setLinks(nextLinks)
-      setLevel(levelId)
-      activeDragNodeIdsRef.current.clear()
-      setIsNodeDragLocked(false)
-      setIsLevelComplete(false)
-      setPlayMode(mode)
-      setView("game")
-      checkIntersections(normalizedNodes, nextLinks, false)
+      setNodes(normalizedNodes);
+      setLinks(nextLinks);
+      setLevel(levelId);
+      activeDragNodeIdsRef.current.clear();
+      setIsNodeDragLocked(false);
+      setIsLevelComplete(false);
+      setPlayMode(mode);
+      setView("game");
+      checkIntersections(normalizedNodes, nextLinks, false);
     },
     [
       clearCompletionHold,
@@ -772,63 +774,63 @@ export default function App() {
       selectedLevelPackId,
       timeTrialState.nodeCount,
     ],
-  )
+  );
 
   const startSession = useCallback(
     (mode: PlayMode, levelIds: number[], forcedTimeTrialNodeCount?: number) => {
       if (levelIds.length === 0) {
-        return
+        return;
       }
-      setSessionLevelIds(levelIds)
-      setSessionIndex(0)
-      loadLevel(levelIds[0], mode, forcedTimeTrialNodeCount)
+      setSessionLevelIds(levelIds);
+      setSessionIndex(0);
+      loadLevel(levelIds[0], mode, forcedTimeTrialNodeCount);
     },
     [loadLevel],
-  )
+  );
 
   const startClassicLevel = useCallback(
     (levelId: number) => {
-      setSessionLevelIds([])
-      setSessionIndex(0)
-      loadLevel(levelId, "classic")
+      setSessionLevelIds([]);
+      setSessionIndex(0);
+      loadLevel(levelId, "classic");
     },
     [loadLevel],
-  )
+  );
 
   const startDailyLevel = useCallback(
     (levelId: number) => {
-      const levelIndex = DAILY_LEVEL_IDS.indexOf(levelId)
+      const levelIndex = DAILY_LEVEL_IDS.indexOf(levelId);
       if (levelIndex < 0) {
-        return
+        return;
       }
 
-      setSessionLevelIds(DAILY_LEVEL_IDS)
-      setSessionIndex(levelIndex)
-      loadLevel(levelId, "daily")
+      setSessionLevelIds(DAILY_LEVEL_IDS);
+      setSessionIndex(levelIndex);
+      loadLevel(levelId, "daily");
     },
     [loadLevel],
-  )
+  );
 
   const startWeeklyLevel = useCallback(
     (levelId: number) => {
-      const levelIndex = WEEKLY_LEVEL_IDS.indexOf(levelId)
+      const levelIndex = WEEKLY_LEVEL_IDS.indexOf(levelId);
       if (levelIndex < 0) {
-        return
+        return;
       }
 
-      setSessionLevelIds(WEEKLY_LEVEL_IDS)
-      setSessionIndex(levelIndex)
-      loadLevel(levelId, "weekly")
+      setSessionLevelIds(WEEKLY_LEVEL_IDS);
+      setSessionIndex(levelIndex);
+      loadLevel(levelId, "weekly");
     },
     [loadLevel],
-  )
+  );
 
   const startTimeTrial = useCallback(
     (nodeCount: number, duration: TrialDuration) => {
       const ordered = Array.from(
         { length: Math.max(PRE_GENERATED_LEVELS.length, 20) },
         (_, index) => index + 1,
-      )
+      );
 
       setTimeTrialState({
         nodeCount,
@@ -837,220 +839,220 @@ export default function App() {
         active: true,
         solvedCount: 0,
         earnedCoins: 0,
-      })
-      startSession("time-trial", ordered, nodeCount)
+      });
+      startSession("time-trial", ordered, nodeCount);
     },
     [startSession],
-  )
+  );
 
   useEffect(() => {
     if (!popupAdVisible) {
-      return
+      return;
     }
 
     if (popupAdSecondsLeft <= 0) {
-      const nextAction = pendingPopupAdAction
-      setPopupAdVisible(false)
-      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-      setPendingPopupAdAction(null)
-      nextAction?.()
-      return
+      const nextAction = pendingPopupAdAction;
+      setPopupAdVisible(false);
+      setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+      setPendingPopupAdAction(null);
+      nextAction?.();
+      return;
     }
 
     const timeoutId = setTimeout(() => {
-      setPopupAdSecondsLeft((previousSeconds) => previousSeconds - 1)
-    }, 1000)
+      setPopupAdSecondsLeft((previousSeconds) => previousSeconds - 1);
+    }, 1000);
 
     return () => {
-      clearTimeout(timeoutId)
-    }
-  }, [pendingPopupAdAction, popupAdSecondsLeft, popupAdVisible])
+      clearTimeout(timeoutId);
+    };
+  }, [pendingPopupAdAction, popupAdSecondsLeft, popupAdVisible]);
 
   const showPopupAd = useCallback(
     (nextAction: () => void) => {
       if (noAdsOwned) {
-        nextAction()
-        return
+        nextAction();
+        return;
       }
 
       const showFallbackPopup = () => {
-        setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
-        setPendingPopupAdAction(() => nextAction)
-        setPopupAdVisible(true)
-      }
+        setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS);
+        setPendingPopupAdAction(() => nextAction);
+        setPopupAdVisible(true);
+      };
 
       if (isExpoGo || !shouldEnableAds || !videoAdUnitId || !adsModule) {
-        showFallbackPopup()
-        return
+        showFallbackPopup();
+        return;
       }
 
-      const { InterstitialAd, AdEventType } = adsModule
+      const { InterstitialAd, AdEventType } = adsModule;
 
       try {
-        const interstitialAd = InterstitialAd.createForAdRequest(videoAdUnitId)
-        let handled = false
-        let displayed = false
-        let timeoutId: ReturnType<typeof setTimeout> | null = null
+        const interstitialAd = InterstitialAd.createForAdRequest(videoAdUnitId);
+        let handled = false;
+        let displayed = false;
+        let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
         const finalize = (callback: () => void) => {
           if (handled) {
-            return
+            return;
           }
-          handled = true
+          handled = true;
           if (timeoutId) {
-            clearTimeout(timeoutId)
+            clearTimeout(timeoutId);
           }
-          unsubscribeLoaded()
-          unsubscribeClosed()
-          unsubscribeError()
-          callback()
-        }
+          unsubscribeLoaded();
+          unsubscribeClosed();
+          unsubscribeError();
+          callback();
+        };
 
         const unsubscribeLoaded = interstitialAd.addAdEventListener(
           AdEventType.LOADED,
           () => {
-            displayed = true
+            displayed = true;
             void interstitialAd.show().catch(() => {
-              finalize(showFallbackPopup)
-            })
+              finalize(showFallbackPopup);
+            });
           },
-        )
+        );
 
         const unsubscribeClosed = interstitialAd.addAdEventListener(
           AdEventType.CLOSED,
           () => {
-            finalize(nextAction)
+            finalize(nextAction);
           },
-        )
+        );
 
         const unsubscribeError = interstitialAd.addAdEventListener(
           AdEventType.ERROR,
           () => {
             if (displayed) {
-              finalize(nextAction)
-              return
+              finalize(nextAction);
+              return;
             }
 
-            finalize(showFallbackPopup)
+            finalize(showFallbackPopup);
           },
-        )
+        );
 
         timeoutId = setTimeout(() => {
-          finalize(showFallbackPopup)
-        }, VIDEO_AD_LOAD_TIMEOUT_MS)
+          finalize(showFallbackPopup);
+        }, VIDEO_AD_LOAD_TIMEOUT_MS);
 
-        interstitialAd.load()
+        interstitialAd.load();
       } catch {
-        showFallbackPopup()
+        showFallbackPopup();
       }
     },
     [adsModule, isExpoGo, noAdsOwned, shouldEnableAds, videoAdUnitId],
-  )
+  );
 
   const endTimeTrial = useCallback(() => {
     showPopupAd(() => {
-      setTimeTrialState((previous) => ({ ...previous, active: false }))
-      setView("time-trial-result")
-    })
-  }, [showPopupAd])
+      setTimeTrialState((previous) => ({ ...previous, active: false }));
+      setView("time-trial-result");
+    });
+  }, [showPopupAd]);
 
   const advanceSessionAfterWin = useCallback(() => {
     if (playMode === "classic") {
-      setView("complete")
-      return
+      setView("complete");
+      return;
     }
 
     if (playMode === "time-trial") {
       if (sessionLevelIds.length === 0) {
-        return
+        return;
       }
-      const nextIndex = (sessionIndex + 1) % sessionLevelIds.length
-      setSessionIndex(nextIndex)
-      loadLevel(sessionLevelIds[nextIndex], "time-trial")
-      return
+      const nextIndex = (sessionIndex + 1) % sessionLevelIds.length;
+      setSessionIndex(nextIndex);
+      loadLevel(sessionLevelIds[nextIndex], "time-trial");
+      return;
     }
 
-    setView("complete")
-  }, [loadLevel, playMode, sessionIndex, sessionLevelIds])
+    setView("complete");
+  }, [loadLevel, playMode, sessionIndex, sessionLevelIds]);
 
   const continueAfterWin = useCallback(() => {
     if (playMode === "time-trial") {
       setTimeout(() => {
-        setIsLevelComplete(false)
-        advanceSessionAfterWin()
-      }, 250)
-      return
+        setIsLevelComplete(false);
+        advanceSessionAfterWin();
+      }, 250);
+      return;
     }
 
-    setView("complete")
-  }, [advanceSessionAfterWin, playMode])
+    setView("complete");
+  }, [advanceSessionAfterWin, playMode]);
 
   const handleWin = useCallback(() => {
-    clearCompletionHold()
-    setIsLevelComplete(true)
+    clearCompletionHold();
+    setIsLevelComplete(true);
     if (activeDragNodeIdsRef.current.size === 0) {
-      setIsNodeDragLocked(true)
+      setIsNodeDragLocked(true);
     }
-    playVictorySound()
+    playVictorySound();
 
     if (playMode === "time-trial") {
       setTimeTrialState((previous) => ({
         ...previous,
         solvedCount: previous.solvedCount + 1,
-      }))
+      }));
 
-      continueAfterWin()
-      return
+      continueAfterWin();
+      return;
     }
 
     const modeForCompletion: CompletionMode =
-      playMode === "daily" || playMode === "weekly" ? playMode : "classic"
+      playMode === "daily" || playMode === "weekly" ? playMode : "classic";
     const levelCompletionKey =
       modeForCompletion === "classic"
         ? classicPackCompletionKey(activeClassicPackId, level)
-        : completionKey(modeForCompletion, level)
-    const didCompleteNewLevel = !completedLevelKeys.has(levelCompletionKey)
+        : completionKey(modeForCompletion, level);
+    const didCompleteNewLevel = !completedLevelKeys.has(levelCompletionKey);
 
     if (didCompleteNewLevel) {
       setCompletedLevelKeys((previousCompletedLevels) => {
-        const nextCompletedLevels = new Set(previousCompletedLevels)
-        nextCompletedLevels.add(levelCompletionKey)
-        return nextCompletedLevels
-      })
+        const nextCompletedLevels = new Set(previousCompletedLevels);
+        nextCompletedLevels.add(levelCompletionKey);
+        return nextCompletedLevels;
+      });
     }
 
     const nextCompletedLevels = didCompleteNewLevel
       ? completedLevelsCount + 1
-      : completedLevelsCount
+      : completedLevelsCount;
     if (didCompleteNewLevel) {
-      setCompletedLevelsCount(nextCompletedLevels)
+      setCompletedLevelsCount(nextCompletedLevels);
     }
 
-    const earned = 5 + nodes.length
-    setCoins((previousCoins) => previousCoins + earned)
+    // const earned = 5 + nodes.length;
+    // setCoins((previousCoins) => previousCoins + earned);
 
-    const now = Date.now()
-    const nextAdEligibleLevelCount = levelsSinceLastInterstitialAd + 1
+    const now = Date.now();
+    const nextAdEligibleLevelCount = levelsSinceLastInterstitialAd + 1;
     const hasEnoughLevels =
-      nextAdEligibleLevelCount >= MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS
+      nextAdEligibleLevelCount >= MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS;
     const hasCooldownElapsed =
       lastInterstitialAdAt === null ||
-      now - lastInterstitialAdAt >= MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS
+      now - lastInterstitialAdAt >= MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS;
 
     if (!noAdsOwned && hasEnoughLevels && hasCooldownElapsed) {
-      setLevelsSinceLastInterstitialAd(0)
-      setLastInterstitialAdAt(now)
+      setLevelsSinceLastInterstitialAd(0);
+      setLastInterstitialAdAt(now);
       setTimeout(() => {
-        showPopupAd(continueAfterWin)
-      }, LEVEL_COMPLETE_CELEBRATION_DELAY_MS)
-      return
+        showPopupAd(continueAfterWin);
+      }, LEVEL_COMPLETE_CELEBRATION_DELAY_MS);
+      return;
     }
 
-    setLevelsSinceLastInterstitialAd(nextAdEligibleLevelCount)
+    setLevelsSinceLastInterstitialAd(nextAdEligibleLevelCount);
 
     setTimeout(() => {
-      continueAfterWin()
-    }, LEVEL_COMPLETE_CELEBRATION_DELAY_MS)
+      continueAfterWin();
+    }, LEVEL_COMPLETE_CELEBRATION_DELAY_MS);
   }, [
     clearCompletionHold,
     completedLevelsCount,
@@ -1064,7 +1066,7 @@ export default function App() {
     levelsSinceLastInterstitialAd,
     showPopupAd,
     playVictorySound,
-  ])
+  ]);
 
   const checkIntersections = useCallback(
     (
@@ -1072,32 +1074,32 @@ export default function App() {
       currentLinks: Link[],
       triggerWin: boolean = true,
     ) => {
-      const intersections = getIntersectingLinkIds(currentNodes, currentLinks)
+      const intersections = getIntersectingLinkIds(currentNodes, currentLinks);
 
-      setIntersectingLinks(intersections)
+      setIntersectingLinks(intersections);
 
       if (!triggerWin || currentLinks.length === 0) {
-        clearCompletionHold()
-        return
+        clearCompletionHold();
+        return;
       }
 
       const isWinConditionMet = isReverseClassicPackActive
         ? intersections.size === currentLinks.length
-        : intersections.size === 0
+        : intersections.size === 0;
 
       if (!isWinConditionMet) {
-        clearCompletionHold()
+        clearCompletionHold();
         if (isLevelComplete) {
-          setIsLevelComplete(false)
+          setIsLevelComplete(false);
         }
-        return
+        return;
       }
 
       if (!isLevelComplete && !completionHoldTimeoutRef.current) {
         completionHoldTimeoutRef.current = setTimeout(() => {
-          completionHoldTimeoutRef.current = null
-          handleWin()
-        }, SOLVED_HOLD_DURATION_MS)
+          completionHoldTimeoutRef.current = null;
+          handleWin();
+        }, SOLVED_HOLD_DURATION_MS);
       }
     },
     [
@@ -1106,7 +1108,7 @@ export default function App() {
       isLevelComplete,
       isReverseClassicPackActive,
     ],
-  )
+  );
 
   useEffect(() => {
     if (
@@ -1114,25 +1116,25 @@ export default function App() {
       playMode !== "time-trial" ||
       !timeTrialState.active
     ) {
-      return
+      return;
     }
 
     const timerId = setInterval(() => {
       setTimeTrialState((previous) => {
         if (!previous.active) {
-          return previous
+          return previous;
         }
         if (previous.timeLeftSeconds <= 1) {
-          return { ...previous, timeLeftSeconds: 0, active: false }
+          return { ...previous, timeLeftSeconds: 0, active: false };
         }
-        return { ...previous, timeLeftSeconds: previous.timeLeftSeconds - 1 }
-      })
-    }, 1000)
+        return { ...previous, timeLeftSeconds: previous.timeLeftSeconds - 1 };
+      });
+    }, 1000);
 
     return () => {
-      clearInterval(timerId)
-    }
-  }, [playMode, timeTrialState.active, view])
+      clearInterval(timerId);
+    };
+  }, [playMode, timeTrialState.active, view]);
 
   useEffect(() => {
     if (
@@ -1143,7 +1145,7 @@ export default function App() {
       !popupAdVisible &&
       !pendingPopupAdAction
     ) {
-      endTimeTrial()
+      endTimeTrial();
     }
   }, [
     endTimeTrial,
@@ -1153,30 +1155,30 @@ export default function App() {
     timeTrialState.active,
     timeTrialState.timeLeftSeconds,
     view,
-  ])
+  ]);
 
   const handleNodeDrag = useCallback(
     (id: string, x: number, y: number) => {
       if (isNodeDragLocked) {
-        return
+        return;
       }
 
       setNodes((previousNodes) => {
-        const nextNode = { id, x, y }
+        const nextNode = { id, x, y };
         const nextNodes = previousNodes.map((node) =>
           node.id === id ? nextNode : node,
-        )
-        checkIntersections(nextNodes, links)
-        return nextNodes
-      })
+        );
+        checkIntersections(nextNodes, links);
+        return nextNodes;
+      });
     },
     [checkIntersections, isNodeDragLocked, links],
-  )
+  );
 
   const handleNodeDragEnd = useCallback(
     (id: string, x: number, y: number) => {
       if (isNodeDragLocked) {
-        return
+        return;
       }
 
       setNodes((previousNodes) => {
@@ -1187,60 +1189,60 @@ export default function App() {
           previousNodes,
           GAME_WIDTH,
           GAME_HEIGHT,
-        )
+        );
         const nextNodes = previousNodes.map((node) =>
           node.id === id ? snappedNode : node,
-        )
-        checkIntersections(nextNodes, links)
-        return nextNodes
-      })
+        );
+        checkIntersections(nextNodes, links);
+        return nextNodes;
+      });
 
       if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
-        setIsNodeDragLocked(true)
+        setIsNodeDragLocked(true);
       }
     },
     [checkIntersections, isLevelComplete, isNodeDragLocked, links],
-  )
+  );
 
   const handleNodeDragStart = useCallback(
     (id: string) => {
       if (isNodeDragLocked) {
-        return
+        return;
       }
 
-      activeDragNodeIdsRef.current.add(id)
+      activeDragNodeIdsRef.current.add(id);
     },
     [isNodeDragLocked],
-  )
+  );
 
   const handleNodeDragFinalize = useCallback(
     (id: string) => {
-      activeDragNodeIdsRef.current.delete(id)
+      activeDragNodeIdsRef.current.delete(id);
 
       if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
-        setIsNodeDragLocked(true)
+        setIsNodeDragLocked(true);
       }
     },
     [isLevelComplete],
-  )
+  );
 
   const handleRestart = useCallback(() => {
-    loadLevel(level, playMode)
-  }, [level, loadLevel, playMode])
+    loadLevel(level, playMode);
+  }, [level, loadLevel, playMode]);
 
   const handleNextFromComplete = useCallback(() => {
     if (playMode === "daily" || playMode === "weekly") {
-      const nextIndex = sessionIndex + 1
+      const nextIndex = sessionIndex + 1;
       if (nextIndex >= sessionLevelIds.length) {
-        setView("home")
-        return
+        setView("home");
+        return;
       }
-      setSessionIndex(nextIndex)
-      loadLevel(sessionLevelIds[nextIndex], playMode)
-      return
+      setSessionIndex(nextIndex);
+      loadLevel(sessionLevelIds[nextIndex], playMode);
+      return;
     }
 
-    startClassicLevel(level + 1)
+    startClassicLevel(level + 1);
   }, [
     level,
     loadLevel,
@@ -1248,250 +1250,321 @@ export default function App() {
     sessionIndex,
     sessionLevelIds,
     startClassicLevel,
-  ])
+  ]);
 
   const purchaseStoreItemByIdentifiers = useCallback(
     async (identifiers: string[]): Promise<boolean> => {
       if (Platform.OS !== "ios" && Platform.OS !== "android") {
-        return false
+        return false;
       }
 
       try {
-        const offerings = await Purchases.getOfferings()
+        const offerings = await Purchases.getOfferings();
         const matchingPackage = findRevenueCatPackageByIdentifiers(
           offerings,
           identifiers,
-        )
+        );
 
         if (!matchingPackage) {
-          return false
+          return false;
         }
 
-        await Purchases.purchasePackage(matchingPackage)
-        return true
+        await Purchases.purchasePackage(matchingPackage);
+        return true;
       } catch {
-        return false
+        return false;
       }
     },
     [],
-  )
+  );
 
   const triggerPurchaseCelebration = useCallback(() => {
-    setPurchaseCelebrationToken((previousToken) => previousToken + 1)
-  }, [])
+    setPurchaseCelebrationToken((previousToken) => previousToken + 1);
+  }, []);
 
   const isCosmeticUnlocked = useCallback(
     (cosmeticId: string) => {
-      const cosmeticItemKey = `cosmetic:${cosmeticId}`
+      const cosmeticItemKey = `cosmetic:${cosmeticId}`;
       if (purchasedStoreItemIds.has(cosmeticItemKey)) {
-        return true
+        return true;
       }
 
       return THEME_PACKS.some(
         (themePack) =>
           purchasedStoreItemIds.has(themePack.id) &&
           themePack.cosmeticIds.includes(cosmeticId),
-      )
+      );
     },
     [purchasedStoreItemIds],
-  )
+  );
 
   const handleBuyNoAds = useCallback(async () => {
     if (noAdsOwned) {
-      return
+      return;
     }
 
     const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
       NO_ADS_REVENUECAT_ID,
       NO_ADS_ITEM_ID,
-    ])
+    ]);
     if (!purchaseSucceeded) {
-      return
+      return;
     }
 
-    setNoAdsOwned(true)
+    setNoAdsOwned(true);
     setPurchasedStoreItemIds((previousOwnedItems) => {
-      const nextOwnedItems = new Set(previousOwnedItems)
-      nextOwnedItems.add(NO_ADS_ITEM_ID)
-      return nextOwnedItems
-    })
-    triggerPurchaseCelebration()
-  }, [noAdsOwned, purchaseStoreItemByIdentifiers, triggerPurchaseCelebration])
+      const nextOwnedItems = new Set(previousOwnedItems);
+      nextOwnedItems.add(NO_ADS_ITEM_ID);
+      return nextOwnedItems;
+    });
+    triggerPurchaseCelebration();
+  }, [noAdsOwned, purchaseStoreItemByIdentifiers, triggerPurchaseCelebration]);
 
   const handleBuyCosmetic = useCallback(
     async (cosmetic: Cosmetic) => {
-      const cosmeticItemKey = `cosmetic:${cosmetic.id}`
+      const cosmeticItemKey = `cosmetic:${cosmetic.id}`;
 
       if (isCosmeticUnlocked(cosmetic.id)) {
-        return
+        return;
       }
 
-      if (cosmetic.priceType === "coins") {
-        if (coins < cosmetic.price) {
-          return
-        }
-
-        setCoins((previousCoins) => previousCoins - cosmetic.price)
-      } else {
+      if (cosmetic.priceType === "real-money") {
         const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
           cosmetic.id,
-        ])
+        ]);
         if (!purchaseSucceeded) {
-          return
+          return;
         }
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(cosmeticItemKey)
-        return nextOwnedItems
-      })
-      triggerPurchaseCelebration()
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(cosmeticItemKey);
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
 
       if (cosmetic.category === "app-theme") {
-        setEquippedThemeCosmeticId(cosmetic.id)
+        setEquippedThemeCosmeticId(cosmetic.id);
       }
     },
     [
-      coins,
       isCosmeticUnlocked,
       purchasedStoreItemIds,
       purchaseStoreItemByIdentifiers,
       triggerPurchaseCelebration,
     ],
-  )
+  );
 
   const handleBuyLevelPack = useCallback(
     async (levelPack: LevelPack) => {
-      const { storeItemId } = levelPack
-      const coinPrice = levelPack.price ?? 0
+      const { storeItemId } = levelPack;
+      // const coinPrice = levelPack.price ?? 0;
 
       if (levelPack.defaultOwned || !storeItemId) {
-        return
+        return;
       }
 
       if (purchasedStoreItemIds.has(storeItemId)) {
-        return
+        return;
       }
 
-      if (levelPack.priceType === "coins") {
-        if (coins < coinPrice) {
-          return
-        }
-
-        setCoins((previousCoins) => previousCoins - coinPrice)
-      } else {
+      if (levelPack.priceType === "real-money") {
         const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
           levelPack.id,
           storeItemId,
-        ])
+        ]);
         if (!purchaseSucceeded) {
-          return
+          return;
         }
         Alert.alert(
           "Purchase successful!",
           `You have unlocked ${levelPack.name}!`,
-        )
+        );
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(storeItemId)
-        return nextOwnedItems
-      })
-      triggerPurchaseCelebration()
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(storeItemId);
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
     },
     [
-      coins,
       purchasedStoreItemIds,
       purchaseStoreItemByIdentifiers,
       triggerPurchaseCelebration,
     ],
-  )
+  );
 
-  const handleBuyCoinPack = useCallback(
-    async (coinPack: CoinPack) => {
-      const { storeItemId } = coinPack
-      if (!storeItemId) {
-        return
-      }
+  // Coin pack purchasing is temporarily disabled.
+  // const handleBuyCoinPack = useCallback(
+  //   async (coinPack: CoinPack) => {
+  //     const { storeItemId } = coinPack;
+  //     if (!storeItemId) {
+  //       return;
+  //     }
 
-      const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
-        coinPack.id,
-        storeItemId,
-      ])
-      if (!purchaseSucceeded) {
-        return
-      }
+  //     const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
+  //       coinPack.id,
+  //       storeItemId,
+  //     ]);
+  //     if (!purchaseSucceeded) {
+  //       return;
+  //     }
 
-      setCoins((previousCoins) => previousCoins + coinPack.coins)
-      triggerPurchaseCelebration()
-      Alert.alert(
-        "Purchase successful!",
-        `You have received ${coinPack.coins} coins!`,
-      )
-    },
-    [purchaseStoreItemByIdentifiers, triggerPurchaseCelebration],
-  )
+  //     setCoins((previousCoins) => previousCoins + coinPack.coins);
+  //     triggerPurchaseCelebration();
+  //     Alert.alert(
+  //       "Purchase successful!",
+  //       `You have received ${coinPack.coins} coins!`,
+  //     );
+  //   },
+  //   [purchaseStoreItemByIdentifiers, triggerPurchaseCelebration],
+  // );
 
   const handleBuyThemePack = useCallback(
     async (themePack: ThemePack) => {
       if (purchasedStoreItemIds.has(themePack.id)) {
-        return
+        return;
       }
 
       const purchaseSucceeded = await purchaseStoreItemByIdentifiers([
         themePack.id,
-      ])
+      ]);
       if (!purchaseSucceeded) {
-        return
+        return;
       }
 
       setPurchasedStoreItemIds((previousOwnedItems) => {
-        const nextOwnedItems = new Set(previousOwnedItems)
-        nextOwnedItems.add(themePack.id)
-        return nextOwnedItems
-      })
-      triggerPurchaseCelebration()
+        const nextOwnedItems = new Set(previousOwnedItems);
+        nextOwnedItems.add(themePack.id);
+        return nextOwnedItems;
+      });
+      triggerPurchaseCelebration();
       Alert.alert(
         "Purchase successful!",
         `You have unlocked ${themePack.name}!`,
-      )
+      );
     },
     [
       purchasedStoreItemIds,
       purchaseStoreItemByIdentifiers,
       triggerPurchaseCelebration,
     ],
-  )
+  );
 
   const handleApplyDefaultTheme = useCallback(() => {
-    setEquippedThemeCosmeticId(null)
-  }, [])
+    setEquippedThemeCosmeticId(null);
+  }, []);
 
   const handleApplyCosmetic = useCallback(
     (cosmetic: Cosmetic) => {
       if (!isCosmeticUnlocked(cosmetic.id)) {
-        return
+        return;
       }
 
       if (cosmetic.category === "app-theme") {
-        setEquippedThemeCosmeticId(cosmetic.id)
+        setEquippedThemeCosmeticId(cosmetic.id);
       }
     },
     [isCosmeticUnlocked],
-  )
+  );
 
   const handleSelectLevelPack = useCallback((packId: string) => {
-    setSelectedLevelPackId(packId)
-    setView("levels")
-  }, [])
+    setSelectedLevelPackId(packId);
+    setView("levels");
+  }, []);
 
-  const appTextureSource = appTheme.appTextureSource ?? null
+  const navigateFromGameToLevelSelection = useCallback(() => {
+    if (playMode === "daily" || playMode === "weekly") {
+      setView("daily-weekly-levels");
+      return;
+    }
+
+    if (playMode === "time-trial") {
+      setView("time-trial");
+      return;
+    }
+
+    setView("levels");
+  }, [playMode]);
+
+  const navigateBackFromCurrentView = useCallback(() => {
+    if (view === "home") {
+      return;
+    }
+
+    switch (view) {
+      case "level-packs":
+      case "admin":
+      case "daily-weekly-levels":
+      case "time-trial":
+      case "store":
+      case "complete":
+      case "time-trial-result":
+      case "settings":
+        setView("home");
+        return;
+      case "levels":
+        setView("level-packs");
+        return;
+      case "game":
+        navigateFromGameToLevelSelection();
+        return;
+      default:
+        return;
+    }
+  }, [navigateFromGameToLevelSelection, view]);
+
+  const handleEdgeSwipeBack = useCallback(() => {
+    if (view === "home") {
+      return;
+    }
+
+    playMenuClickSound();
+    navigateBackFromCurrentView();
+  }, [navigateBackFromCurrentView, playMenuClickSound, view]);
+
+  const edgeSwipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponderCapture: (event, gestureState) => {
+          if (view === "home" || gestureState.dx <= 0) {
+            return false;
+          }
+
+          const startX = event.nativeEvent.pageX - gestureState.dx;
+          const horizontalDistance = Math.abs(gestureState.dx);
+          const verticalDistance = Math.abs(gestureState.dy);
+
+          return (
+            startX <= EDGE_SWIPE_START_WIDTH &&
+            horizontalDistance >= 12 &&
+            horizontalDistance > verticalDistance
+          );
+        },
+        onPanResponderRelease: (event, gestureState) => {
+          const startX = event.nativeEvent.pageX - gestureState.dx;
+          const isEdgeSwipe = startX <= EDGE_SWIPE_START_WIDTH;
+          const isRightSwipe = gestureState.dx >= EDGE_SWIPE_TRIGGER_DISTANCE;
+          const isMostlyHorizontal =
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+
+          if (isEdgeSwipe && isRightSwipe && isMostlyHorizontal) {
+            handleEdgeSwipeBack();
+          }
+        },
+      }),
+    [handleEdgeSwipeBack, view],
+  );
+
+  const appTextureSource = appTheme.appTextureSource ?? null;
 
   return (
     <GestureHandlerRootView
       style={[styles.root, { backgroundColor: appTheme.background }]}
+      {...edgeSwipeResponder.panHandlers}
     >
       {appTextureSource && (
         <Image
@@ -1506,7 +1579,7 @@ export default function App() {
       {view === "home" && (
         <HomeScreen
           theme={appTheme}
-          coins={coins}
+          // coins={coins}
           onSelectLevels={withMenuClickSound(() => setView("level-packs"))}
           onDailyWeekly={withMenuClickSound(() =>
             setView("daily-weekly-levels"),
@@ -1592,7 +1665,7 @@ export default function App() {
       {view === "store" && (
         <StoreScreen
           theme={appTheme}
-          coins={coins}
+          // coins={coins}
           noAdsOwned={noAdsOwned}
           noAdsPrice={NO_ADS_PRICE}
           noAdsPriceLabel={noAdsPriceLabel}
@@ -1605,8 +1678,8 @@ export default function App() {
           onBuyCosmetic={withMenuClickSound(handleBuyCosmetic)}
           onBuyThemePack={withMenuClickSound(handleBuyThemePack)}
           onBuyLevelPack={withMenuClickSound(handleBuyLevelPack)}
-          onBuyCoinPack={withMenuClickSound(handleBuyCoinPack)}
-          coinPackPriceLabels={coinPackPriceLabels}
+          // onBuyCoinPack={withMenuClickSound(handleBuyCoinPack)}
+          // coinPackPriceLabels={coinPackPriceLabels}
           levelPackPriceLabels={levelPackPriceLabels}
           themePackPriceLabels={themePackPriceLabels}
           onApplyDefaultTheme={withThemeChangeSound(handleApplyDefaultTheme)}
@@ -1619,7 +1692,7 @@ export default function App() {
         <GameScreen
           theme={appTheme}
           level={level}
-          coins={coins}
+          // coins={coins}
           nodes={nodes}
           links={links}
           intersectingLinks={intersectingLinks}
@@ -1633,17 +1706,7 @@ export default function App() {
           reverseObjective={isReverseClassicPackActive}
           noAdsOwned={noAdsOwned}
           onBackHome={withMenuClickSound(() => setView("home"))}
-          onOpenLevels={withMenuClickSound(() => {
-            if (playMode === "daily" || playMode === "weekly") {
-              setView("daily-weekly-levels")
-              return
-            }
-            if (playMode === "time-trial") {
-              setView("time-trial")
-              return
-            }
-            setView("levels")
-          })}
+          onOpenLevels={withMenuClickSound(navigateFromGameToLevelSelection)}
           onRestart={withMenuClickSound(handleRestart)}
           onNodeDrag={handleNodeDrag}
           onNodeDragEnd={handleNodeDragEnd}
@@ -1665,7 +1728,7 @@ export default function App() {
       {view === "time-trial-result" && (
         <TimeTrialResultScreen
           solvedCount={timeTrialState.solvedCount}
-          earnedCoins={timeTrialState.earnedCoins}
+          // earnedCoins={timeTrialState.earnedCoins}
           nodeCount={timeTrialState.nodeCount}
           durationSeconds={timeTrialState.durationSeconds}
           onHome={withMenuClickSound(() => setView("home"))}
@@ -1705,5 +1768,5 @@ export default function App() {
       )}
       {/* </SafeAreaView> */}
     </GestureHandlerRootView>
-  )
+  );
 }

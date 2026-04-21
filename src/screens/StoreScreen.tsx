@@ -28,14 +28,14 @@ import {
 import { styles } from "../styles";
 import { Cosmetic } from "../data/cosmetics";
 import { LevelPack } from "../data/levelPacks";
-import coinPacks from "../data/coinPacks";
+// import coinPacks from "../data/coinPacks";
 
 type SelectableLevelPack = LevelPack & {
   owned: boolean;
 };
 
 type StoreScreenProps = {
-  coins: number;
+  // coins: number;
   noAdsOwned: boolean;
   noAdsPrice: number;
   noAdsPriceLabel: string | null;
@@ -48,8 +48,8 @@ type StoreScreenProps = {
   onBuyCosmetic: (cosmetic: Cosmetic) => void;
   onBuyThemePack: (themePack: ThemePack) => void;
   onBuyLevelPack: (levelPack: SelectableLevelPack) => void;
-  onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void;
-  coinPackPriceLabels: Record<string, string>;
+  // onBuyCoinPack: (coinPack: (typeof coinPacks)[number]) => void;
+  // coinPackPriceLabels: Record<string, string>;
   levelPackPriceLabels: Record<string, string>;
   themePackPriceLabels: Record<string, string>;
   onApplyDefaultTheme: () => void;
@@ -216,7 +216,7 @@ function PurchaseCelebrationBurst({ triggerToken }: { triggerToken: number }) {
 }
 
 export function StoreScreen({
-  coins,
+  // coins,
   noAdsOwned,
   noAdsPrice,
   noAdsPriceLabel,
@@ -229,8 +229,8 @@ export function StoreScreen({
   onBuyThemePack,
   onBuyCosmetic,
   onBuyLevelPack,
-  onBuyCoinPack,
-  coinPackPriceLabels,
+  // onBuyCoinPack,
+  // coinPackPriceLabels,
   levelPackPriceLabels,
   themePackPriceLabels,
   onApplyDefaultTheme,
@@ -374,7 +374,6 @@ export function StoreScreen({
           STORE
         </Text>
       </View>
-
       <ScrollView
         style={styles.levelsScroll}
         contentContainerStyle={styles.storeScrollContent}
@@ -546,7 +545,7 @@ export function StoreScreen({
                 {themePack.description}
               </Text>
 
-              <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
+              <View style={{ flexDirection: "row", gap: 12 }}>
                 <TouchableOpacity
                   style={[
                     styles.modeCardButton,
@@ -725,11 +724,13 @@ export function StoreScreen({
         })}
 
         <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
-          Packs
+          Level Packs
+        </Text>
+        <Text style={[styles.modeCardBody, { color: activeTheme.mutedText }]}>
+          Get more levels to play!
         </Text>
         {levelPackItems.map((levelPack) => {
           if (levelPack.defaultOwned) return null;
-          const coinPrice = levelPack.price ?? 0;
 
           const isOwned =
             levelPack.owned ||
@@ -737,12 +738,10 @@ export function StoreScreen({
             (levelPack.storeItemId
               ? purchasedStoreItemIds.has(levelPack.storeItemId)
               : false);
-          const cannotAffordCoins =
-            !isOwned && levelPack.priceType === "coins" && coins < coinPrice;
           const levelPackPriceLabel =
             levelPack.priceType === "real-money"
               ? (levelPackPriceLabels[levelPack.id] ?? "Loading...")
-              : `${coinPrice} coins`;
+              : "UNLOCK";
 
           return (
             <View
@@ -766,31 +765,26 @@ export function StoreScreen({
                   {levelPack.name}
                 </Text>
               </View>
-              {/* <Text
+              <Text
                 style={[
                   styles.modeCardBody,
                   { color: activeTheme.cardMutedText },
                 ]}
               >
                 {levelPack.description}
-              </Text> */}
+              </Text>
 
               <TouchableOpacity
                 style={[
                   styles.modeCardButton,
-                  (isOwned || (!isOwned && cannotAffordCoins)) &&
-                    styles.modeCardButtonDisabled,
+                  isOwned && styles.modeCardButtonDisabled,
                   {
                     backgroundColor: activeTheme.primary,
-                    opacity:
-                      (levelPack.priceType === "coins" && coins < coinPrice) ||
-                      isOwned
-                        ? 0.8
-                        : 1,
+                    opacity: isOwned ? 0.8 : 1,
                   },
                 ]}
                 onPress={() => onBuyLevelPack(levelPack)}
-                disabled={isOwned || (!isOwned && cannotAffordCoins)}
+                disabled={isOwned}
               >
                 <Text style={[styles.modeCardButtonText, { color: "white" }]}>
                   {isOwned ? "OWNED" : levelPackPriceLabel}
@@ -800,7 +794,7 @@ export function StoreScreen({
           );
         })}
 
-        <View
+        {/* <View
           style={{
             display: "flex",
             flexDirection: "row",
@@ -853,7 +847,7 @@ export function StoreScreen({
               </TouchableOpacity>
             </View>
           );
-        })}
+        })} */}
       </ScrollView>
       <PurchaseCelebrationBurst triggerToken={purchaseCelebrationToken} />
     </View>

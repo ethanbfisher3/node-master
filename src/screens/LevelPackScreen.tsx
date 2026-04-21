@@ -1,23 +1,23 @@
-import React from "react"
-import { ScrollView, Text, TouchableOpacity, View } from "react-native"
-import { ArrowLeft, CheckCircle2, Lock, Package } from "lucide-react-native"
+import React from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ArrowLeft, CheckCircle2, Lock, Package } from "lucide-react-native";
 
-import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics"
-import { LevelPack } from "../data/levelPacks"
-import { styles } from "../styles"
-import { ViewType } from "../App"
+import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
+import { LevelPack } from "../data/levelPacks";
+import { styles } from "../styles";
+import { ViewType } from "../App";
 
 type SelectableLevelPack = LevelPack & {
-  owned: boolean
-}
+  owned: boolean;
+};
 
 type LevelPackScreenProps = {
-  packs: SelectableLevelPack[]
-  onBack: () => void
-  onSelectPack: (packId: string) => void
-  goToStore: () => void
-  theme?: AppThemePalette
-}
+  packs: SelectableLevelPack[];
+  onBack: () => void;
+  onSelectPack: (packId: string) => void;
+  goToStore: () => void;
+  theme?: AppThemePalette;
+};
 
 export function LevelPackScreen({
   packs,
@@ -26,9 +26,9 @@ export function LevelPackScreen({
   goToStore,
   theme,
 }: LevelPackScreenProps) {
-  const activeTheme = theme ?? DEFAULT_APP_THEME
-  const ownedPacks = packs.filter((pack) => pack.owned)
-  const purchasablePacks = packs.filter((pack) => !pack.defaultOwned)
+  const activeTheme = theme ?? DEFAULT_APP_THEME;
+  const ownedPacks = packs.filter((pack) => pack.owned);
+  const purchasablePacks = packs.filter((pack) => !pack.defaultOwned);
 
   return (
     <View
@@ -57,9 +57,9 @@ export function LevelPackScreen({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.storeScrollContent}>
-          <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
+          {/* <Text style={[styles.modeCardTitle, { color: activeTheme.text }]}>
             AVAILABLE PACKS
-          </Text>
+          </Text> */}
           {packs.map((pack) => (
             <View
               key={pack.id}
@@ -96,8 +96,8 @@ export function LevelPackScreen({
                   { backgroundColor: activeTheme.primary },
                 ]}
                 onPress={() => {
-                  if (pack.owned) onSelectPack(pack.id)
-                  else goToStore()
+                  if (pack.owned) onSelectPack(pack.id);
+                  else goToStore();
                 }}
               >
                 {pack.owned ? (
@@ -119,5 +119,5 @@ export function LevelPackScreen({
         </View>
       </ScrollView>
     </View>
-  )
+  );
 }

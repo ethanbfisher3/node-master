@@ -1,11 +1,12 @@
 Notifications
 Buy different styles for the nodes (animals like dogs or cats, other pictures)
-Animation for when the user buys coins or ad removal
-allow the user to preview node styles and themes
+Make sure that daily and weekly levels work the way they should
+Fix time trial score sharing
+Remove reverse pack?
+Double check all of the cosmetics colors
 
 
 Play Store stuff (Maybe):
-Achievements on the play store or whatever that is
 Playable ad
 Video ads
 

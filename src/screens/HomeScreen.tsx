@@ -1,9 +1,9 @@
 import React from "react";
-import { Text, TouchableOpacity, View, ScrollView } from "react-native";
+import { Text, TouchableOpacity, View, ScrollView, Image } from "react-native";
 import {
   Hammer,
   Bolt,
-  Coins,
+  // Coins,
   LayoutGrid,
   ShoppingBag,
   SunMoon,
@@ -14,7 +14,7 @@ import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import { styles } from "../styles";
 
 type HomeScreenProps = {
-  coins: number;
+  // coins: number;
   onSelectLevels: () => void;
   onDailyWeekly: () => void;
   onTimeTrial: () => void;
@@ -26,7 +26,7 @@ type HomeScreenProps = {
 };
 
 export function HomeScreen({
-  coins,
+  // coins,
   onSelectLevels,
   onDailyWeekly,
   onTimeTrial,
@@ -69,10 +69,10 @@ export function HomeScreen({
         The most satisfying puzzle
       </Text>
 
-      <View style={styles.coinBadge}>
+      {/* <View style={styles.coinBadge}>
         <Coins size={20} color="#F59E0B" fill="#F59E0B" />
         <Text style={styles.coinText}>{coins}</Text>
-      </View>
+      </View> */}
 
       <TouchableOpacity
         style={[

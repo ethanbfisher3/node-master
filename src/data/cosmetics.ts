@@ -27,7 +27,7 @@ export type Cosmetic = {
 };
 
 export type ThemePack = {
-  id: "theme_pack_light" | "theme_pack_dark" | "theme_pack_textures";
+  id: string;
   name: string;
   description: string;
   cosmeticIds: string[];
@@ -435,7 +435,7 @@ export const THEME_PACKS: ThemePack[] = [
   {
     id: "theme_pack_light",
     name: "Light Theme Pack",
-    description: "A curated set of bright themes for a clean daytime look.",
+    description: "A collection of light themes to style the app.",
     cosmeticIds: [
       "green-theme",
       "sunset-theme",
@@ -450,7 +450,7 @@ export const THEME_PACKS: ThemePack[] = [
   {
     id: "theme_pack_dark",
     name: "Dark Theme Pack",
-    description: "A curated set of dark themes for a night-mode vibe.",
+    description: "A collection of dark themes to style the app.",
     cosmeticIds: [
       "obsidian-theme",
       "midnight-theme",
@@ -461,10 +461,9 @@ export const THEME_PACKS: ThemePack[] = [
     ],
   },
   {
-    id: "theme_pack_textures",
+    id: "theme_pack_texture",
     name: "Texture Pack",
-    description:
-      "A curated collection of wood, silver, bronze, platinum, and stone-inspired looks for themes.",
+    description: "A collection of textured themes to style the app.",
     cosmeticIds: [
       "wood-grain-theme",
       "silver-satin-theme",

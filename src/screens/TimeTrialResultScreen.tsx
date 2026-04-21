@@ -11,7 +11,7 @@ const PLAY_STORE_URL =
 
 type TimeTrialResultScreenProps = {
   solvedCount: number;
-  earnedCoins: number;
+  // earnedCoins: number;
   nodeCount: number | null;
   durationSeconds: number;
   theme?: AppThemePalette;
@@ -21,7 +21,7 @@ type TimeTrialResultScreenProps = {
 
 export function TimeTrialResultScreen({
   solvedCount,
-  earnedCoins,
+  // earnedCoins,
   nodeCount,
   durationSeconds,
   theme,
@@ -67,10 +67,10 @@ export function TimeTrialResultScreen({
           <Text style={styles.rewardLabel}>Puzzles Cleared</Text>
           <Text style={styles.rewardValue}>{solvedCount}</Text>
         </View>
-        <View style={styles.rewardRow}>
+        {/* <View style={styles.rewardRow}>
           <Text style={styles.rewardLabel}>Coins Earned</Text>
           <Text style={styles.rewardValue}>+{earnedCoins}</Text>
-        </View>
+        </View> */}
       </View>
 
       <View style={styles.completeButtonsRow}>
