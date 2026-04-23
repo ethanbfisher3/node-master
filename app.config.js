@@ -1,0 +1,38 @@
+export default {
+  expo: {
+    name: "Uncrossed",
+    slug: "node-master",
+    version: "1.0.0",
+    orientation: "portrait",
+    userInterfaceStyle: "light",
+    plugins: [
+      [
+        "react-native-google-mobile-ads",
+        {
+          androidAppId: "ca-app-pub-9592701510571371~6592931335",
+        },
+      ],
+    ],
+    ios: {
+      supportsTablet: true,
+    },
+    icon: "./src/images/nodemaster_icon_512.jpg",
+    android: {
+      adaptiveIcon: {
+        backgroundColor: "#ffffff",
+        backgroundImage: "./src/images/nodemaster_icon_512.jpg",
+        foregroundImage: "./src/images/nodemaster_icon_512.jpg",
+      },
+      package: "com.ethanbfisher3.node_master",
+    },
+    web: {},
+    extra: {
+      revenueCatApiKeyApple: process.env.REVENUECAT_API_KEY_APPLE,
+      revenueCatApiKeyGoogle: process.env.REVENUECAT_API_KEY_GOOGLE,
+      revenueCatApiKeyTestStore: process.env.REVENUECAT_API_KEY_TEST_STORE,
+      eas: {
+        projectId: "3f47d194-2092-47a0-9422-090e3a3839e9",
+      },
+    },
+  },
+}
