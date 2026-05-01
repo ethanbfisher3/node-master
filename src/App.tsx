@@ -24,6 +24,7 @@ import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen"
 import { TimeTrialScreen } from "./screens/TimeTrialScreen"
 import { SettingsScreen } from "./screens/SettingsScreen"
 import { BannerAdSlot } from "./components/BannerAdSlot"
+import { DateCraftPopupAd } from "./components/DateCraftPopupAd"
 import Constants from "expo-constants"
 import cosmetics, {
   AppThemePalette,
@@ -42,6 +43,7 @@ import {
 } from "./utils/gameLogic"
 import { CoinPack } from "./data/coinPacks"
 import { DEFAULT_SETTINGS, readSettings } from "./utils/settings"
+import { useIsOffline } from "./utils/useIsOffline"
 import {
   DAILY_LEVEL_IDS,
   DEFAULT_CLASSIC_PACK_ID,
@@ -117,6 +119,7 @@ type TimeTrialState = {
 export default function App() {
   const isExpoGo = Constants.executionEnvironment === "storeClient"
   const shouldEnableAds = !isExpoGo
+  const isOffline = useIsOffline()
   const [view, setView] = useState<ViewType>("home")
   const [playMode, setPlayMode] = useState<PlayMode>("classic")
   const [level, setLevel] = useState(1)
@@ -150,6 +153,7 @@ export default function App() {
   const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([])
   const [sessionIndex, setSessionIndex] = useState(0)
   const [popupAdVisible, setPopupAdVisible] = useState(false)
+  const [showDateCraftPopup, setShowDateCraftPopup] = useState(false)
   const [popupAdSecondsLeft, setPopupAdSecondsLeft] = useState(
     POPUP_AD_DURATION_SECONDS,
   )
@@ -869,6 +873,13 @@ export default function App() {
         return
       }
 
+      // Show DateCraft ad when offline
+      if (isOffline) {
+        setPendingPopupAdAction(() => nextAction)
+        setShowDateCraftPopup(true)
+        return
+      }
+
       const showFallbackPopup = () => {
         setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
         setPendingPopupAdAction(() => nextAction)
@@ -940,7 +951,14 @@ export default function App() {
         showFallbackPopup()
       }
     },
-    [adsModule, isExpoGo, noAdsOwned, shouldEnableAds, videoAdUnitId],
+    [
+      adsModule,
+      isExpoGo,
+      isOffline,
+      noAdsOwned,
+      shouldEnableAds,
+      videoAdUnitId,
+    ],
   )
 
   const endTimeTrial = useCallback(() => {
@@ -1760,6 +1778,18 @@ export default function App() {
           </View>
         </Modal>
       )}
+
+      {showDateCraftPopup && (
+        <DateCraftPopupAd
+          onClose={() => {
+            setShowDateCraftPopup(false)
+            const nextAction = pendingPopupAdAction
+            setPendingPopupAdAction(null)
+            nextAction?.()
+          }}
+        />
+      )}
+
       {/* </SafeAreaView> */}
     </GestureHandlerRootView>
   )

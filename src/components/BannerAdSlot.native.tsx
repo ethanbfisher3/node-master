@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from "react";
-import { Platform, useWindowDimensions, View } from "react-native";
-import { styles } from "../styles";
-import { TestIds } from "react-native-google-mobile-ads";
+import React, { useEffect, useState } from "react"
+import { Platform, useWindowDimensions, View } from "react-native"
+import { styles } from "../styles"
+import { TestIds } from "react-native-google-mobile-ads"
+import { useIsOffline } from "../utils/useIsOffline"
+import { DateCraftAdBanner } from "./DateCraftAdBanner"
 
 const bannerAdUnitId = __DEV__
   ? TestIds.BANNER
@@ -9,53 +11,62 @@ const bannerAdUnitId = __DEV__
     ? "ca-app-pub-9592701510571371/3743406719"
     : Platform.OS === "ios"
       ? "ca-app-pub-9592701510571371/7209906218"
-      : null;
-const ANDROID_NAV_BUTTON_BUFFER = 48;
+      : null
+const ANDROID_NAV_BUTTON_BUFFER = 48
 
 export function BannerAdSlot() {
-  const { width } = useWindowDimensions();
-  const bottomBuffer =
-    Platform.OS === "android" ? ANDROID_NAV_BUTTON_BUFFER : 0;
+  const { width } = useWindowDimensions()
+  const bottomBuffer = Platform.OS === "android" ? ANDROID_NAV_BUTTON_BUFFER : 0
+  const isOffline = useIsOffline()
   const [adModule, setAdModule] = useState<
     typeof import("react-native-google-mobile-ads") | null
-  >(null);
+  >(null)
 
   useEffect(() => {
-    if (!bannerAdUnitId) {
-      return;
+    if (!bannerAdUnitId || isOffline) {
+      return
     }
 
-    let cancelled = false;
+    let cancelled = false
 
     const loadAdModule = async () => {
       try {
-        const module = await import("react-native-google-mobile-ads");
+        const module = await import("react-native-google-mobile-ads")
         if (!cancelled) {
-          setAdModule(module);
+          setAdModule(module)
         }
       } catch {
         if (!cancelled) {
-          setAdModule(null);
+          setAdModule(null)
         }
       }
-    };
+    }
 
-    void loadAdModule();
+    void loadAdModule()
 
     return () => {
-      cancelled = true;
-    };
-  }, []);
+      cancelled = true
+    }
+  }, [isOffline])
+
+  // Show DateCraft ad when offline
+  if (isOffline) {
+    return (
+      <View style={[styles.bannerAdContainer, { paddingBottom: bottomBuffer }]}>
+        <DateCraftAdBanner />
+      </View>
+    )
+  }
 
   if (!bannerAdUnitId) {
-    return null;
+    return null
   }
 
   if (!adModule) {
-    return null;
+    return null
   }
 
-  const { BannerAd } = adModule;
+  const { BannerAd } = adModule
 
   return (
     <View style={[styles.bannerAdContainer, { paddingBottom: bottomBuffer }]}>
@@ -65,5 +76,5 @@ export function BannerAdSlot() {
         width={width}
       />
     </View>
-  );
+  )
 }
