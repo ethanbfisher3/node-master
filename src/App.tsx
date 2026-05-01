@@ -873,7 +873,6 @@ export default function App() {
 
       // If offline, don't attempt video ads — just continue
       if (isOffline) {
-        console.log("Skipping video ad: offline")
         nextAction()
         return
       }
@@ -885,12 +884,6 @@ export default function App() {
       }
 
       if (isExpoGo || !shouldEnableAds || !videoAdUnitId || !adsModule) {
-        console.log("Skipping video ad: ad environment not available", {
-          isExpoGo,
-          shouldEnableAds,
-          videoAdUnitId,
-          hasAdsModule: !!adsModule,
-        })
         // No ad available in this environment — skip showing any popup ad
         nextAction()
         return
@@ -899,7 +892,6 @@ export default function App() {
       const { InterstitialAd, AdEventType } = adsModule
 
       try {
-        console.log("Creating interstitial for adUnit", videoAdUnitId)
         const interstitialAd = InterstitialAd.createForAdRequest(videoAdUnitId)
         let handled = false
         let displayed = false
@@ -922,7 +914,6 @@ export default function App() {
         const unsubscribeLoaded = interstitialAd.addAdEventListener(
           AdEventType.LOADED,
           () => {
-            console.log("Interstitial loaded")
             displayed = true
             void interstitialAd.show().catch((err: any) => {
               console.warn("Interstitial show failed", err)
@@ -934,7 +925,6 @@ export default function App() {
         const unsubscribeClosed = interstitialAd.addAdEventListener(
           AdEventType.CLOSED,
           () => {
-            console.log("Interstitial closed")
             finalize(nextAction)
           },
         )
@@ -949,7 +939,6 @@ export default function App() {
         )
 
         timeoutId = setTimeout(() => {
-          console.log("Interstitial load timeout")
           finalize(nextAction)
         }, VIDEO_AD_LOAD_TIMEOUT_MS)
 
