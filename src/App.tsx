@@ -24,7 +24,6 @@ import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen"
 import { TimeTrialScreen } from "./screens/TimeTrialScreen"
 import { SettingsScreen } from "./screens/SettingsScreen"
 import { BannerAdSlot } from "./components/BannerAdSlot"
-import { DateCraftPopupAd } from "./components/DateCraftPopupAd"
 import Constants from "expo-constants"
 import cosmetics, {
   AppThemePalette,
@@ -100,7 +99,7 @@ const VIDEO_AD_LOAD_TIMEOUT_MS = 5000
 const EDGE_SWIPE_START_WIDTH = 28
 const EDGE_SWIPE_TRIGGER_DISTANCE = 72
 const videoAdUnitId = __DEV__
-  ? TestIds.NATIVE_VIDEO
+  ? TestIds.INTERSTITIAL
   : Platform.OS === "android"
     ? "ca-app-pub-9592701510571371/3130606158"
     : Platform.OS === "ios"
@@ -153,7 +152,6 @@ export default function App() {
   const [sessionLevelIds, setSessionLevelIds] = useState<number[]>([])
   const [sessionIndex, setSessionIndex] = useState(0)
   const [popupAdVisible, setPopupAdVisible] = useState(false)
-  const [showDateCraftPopup, setShowDateCraftPopup] = useState(false)
   const [popupAdSecondsLeft, setPopupAdSecondsLeft] = useState(
     POPUP_AD_DURATION_SECONDS,
   )
@@ -873,10 +871,10 @@ export default function App() {
         return
       }
 
-      // Show DateCraft ad when offline
+      // If offline, don't attempt video ads — just continue
       if (isOffline) {
-        setPendingPopupAdAction(() => nextAction)
-        setShowDateCraftPopup(true)
+        console.log("Skipping video ad: offline")
+        nextAction()
         return
       }
 
@@ -887,13 +885,21 @@ export default function App() {
       }
 
       if (isExpoGo || !shouldEnableAds || !videoAdUnitId || !adsModule) {
-        showFallbackPopup()
+        console.log("Skipping video ad: ad environment not available", {
+          isExpoGo,
+          shouldEnableAds,
+          videoAdUnitId,
+          hasAdsModule: !!adsModule,
+        })
+        // No ad available in this environment — skip showing any popup ad
+        nextAction()
         return
       }
 
       const { InterstitialAd, AdEventType } = adsModule
 
       try {
+        console.log("Creating interstitial for adUnit", videoAdUnitId)
         const interstitialAd = InterstitialAd.createForAdRequest(videoAdUnitId)
         let handled = false
         let displayed = false
@@ -916,9 +922,11 @@ export default function App() {
         const unsubscribeLoaded = interstitialAd.addAdEventListener(
           AdEventType.LOADED,
           () => {
+            console.log("Interstitial loaded")
             displayed = true
-            void interstitialAd.show().catch(() => {
-              finalize(showFallbackPopup)
+            void interstitialAd.show().catch((err: any) => {
+              console.warn("Interstitial show failed", err)
+              finalize(nextAction)
             })
           },
         )
@@ -926,24 +934,23 @@ export default function App() {
         const unsubscribeClosed = interstitialAd.addAdEventListener(
           AdEventType.CLOSED,
           () => {
+            console.log("Interstitial closed")
             finalize(nextAction)
           },
         )
 
         const unsubscribeError = interstitialAd.addAdEventListener(
           AdEventType.ERROR,
-          () => {
-            if (displayed) {
-              finalize(nextAction)
-              return
-            }
-
-            finalize(showFallbackPopup)
+          (err) => {
+            console.warn("Interstitial error", err)
+            // On error, proceed — don't show fallback video popup
+            finalize(nextAction)
           },
         )
 
         timeoutId = setTimeout(() => {
-          finalize(showFallbackPopup)
+          console.log("Interstitial load timeout")
+          finalize(nextAction)
         }, VIDEO_AD_LOAD_TIMEOUT_MS)
 
         interstitialAd.load()
@@ -1777,17 +1784,6 @@ export default function App() {
             </View>
           </View>
         </Modal>
-      )}
-
-      {showDateCraftPopup && (
-        <DateCraftPopupAd
-          onClose={() => {
-            setShowDateCraftPopup(false)
-            const nextAction = pendingPopupAdAction
-            setPendingPopupAdAction(null)
-            nextAction?.()
-          }}
-        />
       )}
 
       {/* </SafeAreaView> */}

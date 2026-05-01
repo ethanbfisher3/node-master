@@ -23,7 +23,7 @@ export function BannerAdSlot() {
   >(null)
 
   useEffect(() => {
-    if (!bannerAdUnitId || isOffline) {
+    if (!bannerAdUnitId) {
       return
     }
 
@@ -49,21 +49,12 @@ export function BannerAdSlot() {
     }
   }, [isOffline])
 
-  // Show DateCraft ad when offline
-  if (isOffline) {
+  if (isOffline || !bannerAdUnitId || !adModule) {
     return (
       <View style={[styles.bannerAdContainer, { paddingBottom: bottomBuffer }]}>
         <DateCraftAdBanner />
       </View>
     )
-  }
-
-  if (!bannerAdUnitId) {
-    return null
-  }
-
-  if (!adModule) {
-    return null
   }
 
   const { BannerAd } = adModule
