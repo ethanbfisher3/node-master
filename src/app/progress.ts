@@ -1,25 +1,32 @@
-import { storageGetItem, storageSetItem } from "../utils/appStorage";
+import { storageGetItem, storageSetItem } from "../utils/appStorage"
 import {
   COINS_STORAGE_KEY,
   COMPLETED_LEVELS_STORAGE_KEY,
   DEFAULT_CLASSIC_PACK_ID,
   NO_ADS_ITEM_ID,
   PLAYER_PROGRESS_STORAGE_KEY,
-} from "./constants";
+} from "./constants"
 
 export type PersistedPlayerProgress = {
-  level: number;
-  coins: number;
-  noAdsOwned: boolean;
-  purchasedStoreItemIds: string[];
-  equippedThemeCosmeticId: string | null;
-  completedLevelKeys: string[];
-  completedLevelsCount: number;
-  levelsSinceLastInterstitialAd: number;
-  lastInterstitialAdAt: number | null;
-};
+  level: number
+  coins: number
+  noAdsOwned: boolean
+  purchasedStoreItemIds: string[]
+  equippedThemeCosmeticId: string | null
+  completedLevelKeys: string[]
+  completedLevelsCount: number
+  levelsSinceLastInterstitialAd: number
+  lastInterstitialAdAt: number | null
+  dailyChallengeResetKey: string
+  weeklyChallengeResetKey: string
+}
 
-export type CompletionMode = "classic" | "daily" | "weekly";
+export type CompletionMode = "classic" | "daily" | "weekly"
+
+export type ChallengeResetKeys = {
+  dailyChallengeResetKey: string
+  weeklyChallengeResetKey: string
+}
 
 function toNonNegativeInt(value: unknown, fallback: number): number {
   const parsed =
@@ -27,104 +34,145 @@ function toNonNegativeInt(value: unknown, fallback: number): number {
       ? value
       : typeof value === "string"
         ? Number(value)
-        : Number.NaN;
+        : Number.NaN
 
   if (!Number.isFinite(parsed) || parsed < 0) {
-    return fallback;
+    return fallback
   }
 
-  return Math.floor(parsed);
+  return Math.floor(parsed)
 }
 
 async function readLegacyCompletedLevels(): Promise<Set<number>> {
   try {
-    const rawValue = await storageGetItem(COMPLETED_LEVELS_STORAGE_KEY);
+    const rawValue = await storageGetItem(COMPLETED_LEVELS_STORAGE_KEY)
     if (!rawValue) {
-      return new Set();
+      return new Set()
     }
 
-    const parsedValue = JSON.parse(rawValue) as unknown;
+    const parsedValue = JSON.parse(rawValue) as unknown
     if (!Array.isArray(parsedValue)) {
-      return new Set();
+      return new Set()
     }
 
     return new Set(
       parsedValue.filter((value): value is number => typeof value === "number"),
-    );
+    )
   } catch {
-    return new Set();
+    return new Set()
+  }
+}
+
+function formatLocalDateKey(date: Date): string {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+function getWeekStartDate(date: Date): Date {
+  const weekStart = new Date(date)
+  const dayOffset = (weekStart.getDay() + 6) % 7
+  weekStart.setDate(weekStart.getDate() - dayOffset)
+  return weekStart
+}
+
+export function getCurrentChallengeResetKeys(
+  timestamp = Date.now(),
+): ChallengeResetKeys {
+  const currentDate = new Date(timestamp)
+  return {
+    dailyChallengeResetKey: formatLocalDateKey(currentDate),
+    weeklyChallengeResetKey: formatLocalDateKey(getWeekStartDate(currentDate)),
   }
 }
 
 export function completionKey(mode: CompletionMode, levelId: number): string {
-  return `${mode}:${levelId}`;
+  return `${mode}:${levelId}`
 }
 
 export function classicPackCompletionKey(
   packId: string,
   levelId: number,
 ): string {
-  return `classic:${packId}:${levelId}`;
+  return `classic:${packId}:${levelId}`
 }
 
 export function getCompletedLevelIdsForMode(
   completedLevelKeys: Set<string>,
   mode: CompletionMode,
 ): Set<number> {
-  const result = new Set<number>();
+  const result = new Set<number>()
 
   for (const key of completedLevelKeys) {
-    const [entryMode, levelText] = key.split(":");
+    const [entryMode, levelText] = key.split(":")
     if (entryMode !== mode) {
-      continue;
+      continue
     }
 
-    const levelNumber = Number(levelText);
+    const levelNumber = Number(levelText)
     if (Number.isFinite(levelNumber)) {
-      result.add(levelNumber);
+      result.add(levelNumber)
     }
   }
 
-  return result;
+  return result
+}
+
+export function filterCompletedLevelKeysForMode(
+  completedLevelKeys: Set<string>,
+  mode: Exclude<CompletionMode, "classic">,
+): Set<string> {
+  const result = new Set<string>()
+
+  for (const key of completedLevelKeys) {
+    if (!key.startsWith(`${mode}:`)) {
+      result.add(key)
+    }
+  }
+
+  return result
 }
 
 export function getCompletedLevelIdsForClassicPack(
   completedLevelKeys: Set<string>,
   packId: string,
 ): Set<number> {
-  const result = new Set<number>();
-  const classicPrefix = `classic:${packId}:`;
+  const result = new Set<number>()
+  const classicPrefix = `classic:${packId}:`
 
   for (const key of completedLevelKeys) {
     if (!key.startsWith(classicPrefix)) {
-      continue;
+      continue
     }
 
-    const levelNumber = Number(key.slice(classicPrefix.length));
+    const levelNumber = Number(key.slice(classicPrefix.length))
     if (Number.isFinite(levelNumber)) {
-      result.add(levelNumber);
+      result.add(levelNumber)
     }
   }
 
-  return result;
+  return result
 }
 
 function migrateClassicCompletionKeys(keys: string[]): string[] {
   return keys.map((key) => {
-    const parts = key.split(":");
+    const parts = key.split(":")
 
     if (parts.length === 2 && parts[0] === "classic") {
-      const levelNumber = Number(parts[1]);
+      const levelNumber = Number(parts[1])
       if (Number.isFinite(levelNumber)) {
-        return classicPackCompletionKey(DEFAULT_CLASSIC_PACK_ID, levelNumber);
+        return classicPackCompletionKey(DEFAULT_CLASSIC_PACK_ID, levelNumber)
       }
     }
 
-    return key;
-  });
+    return key
+  })
 }
 
 function defaultPlayerProgress(): PersistedPlayerProgress {
+  const currentResetKeys = getCurrentChallengeResetKeys()
+
   return {
     level: 1,
     coins: 0,
@@ -135,41 +183,94 @@ function defaultPlayerProgress(): PersistedPlayerProgress {
     completedLevelsCount: 0,
     levelsSinceLastInterstitialAd: 0,
     lastInterstitialAdAt: null,
-  };
+    dailyChallengeResetKey: currentResetKeys.dailyChallengeResetKey,
+    weeklyChallengeResetKey: currentResetKeys.weeklyChallengeResetKey,
+  }
+}
+
+function normalizeChallengeProgress(
+  completedLevelKeys: string[],
+  storedResetKeys: Partial<ChallengeResetKeys>,
+  timestamp = Date.now(),
+): {
+  completedLevelKeys: string[]
+  completedLevelsCount: number
+  dailyChallengeResetKey: string
+  weeklyChallengeResetKey: string
+} {
+  const currentResetKeys = getCurrentChallengeResetKeys(timestamp)
+  const nextCompletedLevelKeys = new Set(completedLevelKeys)
+
+  if (
+    storedResetKeys.dailyChallengeResetKey !==
+    currentResetKeys.dailyChallengeResetKey
+  ) {
+    for (const key of completedLevelKeys) {
+      if (key.startsWith("daily:")) {
+        nextCompletedLevelKeys.delete(key)
+      }
+    }
+  }
+
+  if (
+    storedResetKeys.weeklyChallengeResetKey !==
+    currentResetKeys.weeklyChallengeResetKey
+  ) {
+    for (const key of completedLevelKeys) {
+      if (key.startsWith("weekly:")) {
+        nextCompletedLevelKeys.delete(key)
+      }
+    }
+  }
+
+  const normalizedCompletedLevelKeys = Array.from(nextCompletedLevelKeys)
+
+  return {
+    completedLevelKeys: normalizedCompletedLevelKeys,
+    completedLevelsCount: normalizedCompletedLevelKeys.length,
+    dailyChallengeResetKey: currentResetKeys.dailyChallengeResetKey,
+    weeklyChallengeResetKey: currentResetKeys.weeklyChallengeResetKey,
+  }
 }
 
 export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
   try {
-    const rawValue = await storageGetItem(PLAYER_PROGRESS_STORAGE_KEY);
-    const legacyCoinsRawValue = await storageGetItem(COINS_STORAGE_KEY);
-    const legacyCoins = toNonNegativeInt(legacyCoinsRawValue, 0);
+    const rawValue = await storageGetItem(PLAYER_PROGRESS_STORAGE_KEY)
+    const legacyCoinsRawValue = await storageGetItem(COINS_STORAGE_KEY)
+    const legacyCoins = toNonNegativeInt(legacyCoinsRawValue, 0)
 
     if (!rawValue) {
       const legacyCompletedLevelKeys = Array.from(
         await readLegacyCompletedLevels(),
-      ).map((levelId) => completionKey("classic", levelId));
+      ).map((levelId) => completionKey("classic", levelId))
+      const normalizedChallengeProgress = normalizeChallengeProgress(
+        legacyCompletedLevelKeys,
+        {},
+      )
       return {
         ...defaultPlayerProgress(),
         coins: legacyCoins,
-        completedLevelKeys: legacyCompletedLevelKeys,
-        completedLevelsCount: legacyCompletedLevelKeys.length,
-      };
+        completedLevelKeys: normalizedChallengeProgress.completedLevelKeys,
+        completedLevelsCount: normalizedChallengeProgress.completedLevelsCount,
+        dailyChallengeResetKey:
+          normalizedChallengeProgress.dailyChallengeResetKey,
+        weeklyChallengeResetKey:
+          normalizedChallengeProgress.weeklyChallengeResetKey,
+      }
     }
 
-    const parsedValue = JSON.parse(
-      rawValue,
-    ) as Partial<PersistedPlayerProgress>;
+    const parsedValue = JSON.parse(rawValue) as Partial<PersistedPlayerProgress>
     const purchasedStoreItemIds = Array.isArray(
       parsedValue.purchasedStoreItemIds,
     )
       ? parsedValue.purchasedStoreItemIds.filter(
           (value): value is string => typeof value === "string",
         )
-      : [];
+      : []
 
-    const noAdsOwned = Boolean(parsedValue.noAdsOwned);
+    const noAdsOwned = Boolean(parsedValue.noAdsOwned)
     if (noAdsOwned && !purchasedStoreItemIds.includes(NO_ADS_ITEM_ID)) {
-      purchasedStoreItemIds.push(NO_ADS_ITEM_ID);
+      purchasedStoreItemIds.push(NO_ADS_ITEM_ID)
     }
 
     const completedLevelKeys = Array.isArray(parsedValue.completedLevelKeys)
@@ -182,10 +283,23 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
         ? (parsedValue as { completedLevelIds: unknown[] }).completedLevelIds
             .filter((value): value is number => typeof value === "number")
             .map((value) => completionKey("classic", value))
-        : [];
+        : []
 
     const migratedCompletedLevelKeys =
-      migrateClassicCompletionKeys(completedLevelKeys);
+      migrateClassicCompletionKeys(completedLevelKeys)
+    const normalizedChallengeProgress = normalizeChallengeProgress(
+      migratedCompletedLevelKeys,
+      {
+        dailyChallengeResetKey:
+          typeof parsedValue.dailyChallengeResetKey === "string"
+            ? parsedValue.dailyChallengeResetKey
+            : undefined,
+        weeklyChallengeResetKey:
+          typeof parsedValue.weeklyChallengeResetKey === "string"
+            ? parsedValue.weeklyChallengeResetKey
+            : undefined,
+      },
+    )
 
     return {
       level: toNonNegativeInt(parsedValue.level, 1) || 1,
@@ -200,11 +314,8 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
             ? ((parsedValue as { equippedCosmeticId: string })
                 .equippedCosmeticId ?? null)
             : null,
-      completedLevelKeys: migratedCompletedLevelKeys,
-      completedLevelsCount: toNonNegativeInt(
-        parsedValue.completedLevelsCount,
-        migratedCompletedLevelKeys.length,
-      ),
+      completedLevelKeys: normalizedChallengeProgress.completedLevelKeys,
+      completedLevelsCount: normalizedChallengeProgress.completedLevelsCount,
       levelsSinceLastInterstitialAd: toNonNegativeInt(
         parsedValue.levelsSinceLastInterstitialAd,
         0,
@@ -213,16 +324,20 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
         typeof parsedValue.lastInterstitialAdAt === "number"
           ? parsedValue.lastInterstitialAdAt
           : null,
-    };
+      dailyChallengeResetKey:
+        normalizedChallengeProgress.dailyChallengeResetKey,
+      weeklyChallengeResetKey:
+        normalizedChallengeProgress.weeklyChallengeResetKey,
+    }
   } catch {
     const fallbackCoins = toNonNegativeInt(
       await storageGetItem(COINS_STORAGE_KEY),
       0,
-    );
+    )
     return {
       ...defaultPlayerProgress(),
       coins: fallbackCoins,
-    };
+    }
   }
 }
 
@@ -230,8 +345,8 @@ export async function writePlayerProgress(
   progress: PersistedPlayerProgress,
 ): Promise<void> {
   try {
-    const normalizedCoins = toNonNegativeInt(progress.coins, 0);
-    const legacyEquippedCosmeticId = progress.equippedThemeCosmeticId;
+    const normalizedCoins = toNonNegativeInt(progress.coins, 0)
+    const legacyEquippedCosmeticId = progress.equippedThemeCosmeticId
     await storageSetItem(
       PLAYER_PROGRESS_STORAGE_KEY,
       JSON.stringify({
@@ -239,18 +354,18 @@ export async function writePlayerProgress(
         coins: normalizedCoins,
         equippedCosmeticId: legacyEquippedCosmeticId,
       }),
-    );
-    await storageSetItem(COINS_STORAGE_KEY, String(normalizedCoins));
+    )
+    await storageSetItem(COINS_STORAGE_KEY, String(normalizedCoins))
 
     const classicCompletedLevelIds = progress.completedLevelKeys
       .filter((key) => key.startsWith("classic:"))
       .map((key) => Number(key.split(":")[1]))
-      .filter((value) => Number.isFinite(value));
+      .filter((value) => Number.isFinite(value))
 
     await storageSetItem(
       COMPLETED_LEVELS_STORAGE_KEY,
       JSON.stringify(classicCompletedLevelIds),
-    );
+    )
   } catch {
     // Ignore storage failures; the game should remain playable.
   }

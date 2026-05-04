@@ -7,6 +7,7 @@ import {
   enrichTimeTrialLinks,
   getIntersectingLinkIds,
 } from "./levelIntersections";
+import { getCurrentChallengeResetKeys } from "./progress";
 import {
   generateLevel,
   Link,
@@ -233,7 +234,16 @@ export function generateLevelForMode({
   let nextLinks: Link[] = [];
 
   if (mode === "daily" || mode === "weekly" || mode === "time-trial") {
-    const cacheKey = `${mode}-${levelId}`;
+    const currentChallengeResetKeys = getCurrentChallengeResetKeys();
+    const challengeSeed =
+      mode === "daily"
+        ? currentChallengeResetKeys.dailyChallengeResetKey
+        : mode === "weekly"
+          ? currentChallengeResetKeys.weeklyChallengeResetKey
+          : undefined;
+    const cacheKey = challengeSeed
+      ? `${mode}-${challengeSeed}-${levelId}`
+      : `${mode}-${levelId}`;
     const shouldUseCache = mode !== "time-trial";
     const cachedLevel = shouldUseCache
       ? generatedModeLevelsCache.get(cacheKey)
@@ -243,12 +253,15 @@ export function generateLevelForMode({
       nextNodes = JSON.parse(JSON.stringify(cachedLevel.nodes));
       nextLinks = JSON.parse(JSON.stringify(cachedLevel.links));
     } else {
-      const nodeCount =
-        mode === "time-trial"
-          ? Math.max(5, forcedTimeTrialNodeCount ?? timeTrialNodeCount ?? 7)
-          : 7 + Math.floor(Math.random() * 7);
+      const attemptSeedPrefix = challengeSeed
+        ? `${mode}:${levelId}:${challengeSeed}`
+        : undefined;
 
       if (mode === "time-trial") {
+        const nodeCount = Math.max(
+          5,
+          forcedTimeTrialNodeCount ?? timeTrialNodeCount ?? 7,
+        );
         let generatedNodes: Node[] = [];
         let generatedLinks: Link[] = [];
 
@@ -292,7 +305,6 @@ export function generateLevelForMode({
         nextNodes = generatedNodes;
         nextLinks = generatedLinks;
       } else {
-        const generatorLevel = (nodeCount - 4) * 2;
         let fallbackNodes: Node[] = [];
         let fallbackLinks: Link[] = [];
 
@@ -301,11 +313,19 @@ export function generateLevelForMode({
           attempt < MAX_TIME_TRIAL_GENERATION_ATTEMPTS;
           attempt++
         ) {
+          const attemptSeed = attemptSeedPrefix
+            ? `${attemptSeedPrefix}:${attempt}`
+            : undefined;
+          const attemptRandom = attemptSeed
+            ? createDeterministicRandom(attemptSeed)
+            : null;
+          const nodeCount = 7 + Math.floor((attemptRandom ?? Math.random)() * 7);
+          const generatorLevel = (nodeCount - 4) * 2;
           const generatedLevel = generateLevel(
             generatorLevel,
             width,
             height,
-            undefined,
+            attemptSeed,
             nodeCount,
           );
 

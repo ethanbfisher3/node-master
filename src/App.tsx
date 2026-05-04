@@ -66,7 +66,9 @@ import {
 } from "./app/revenueCat"
 import {
   classicPackCompletionKey,
+  filterCompletedLevelKeysForMode,
   completionKey,
+  getCurrentChallengeResetKeys,
   getCompletedLevelIdsForClassicPack,
   getCompletedLevelIdsForMode,
   readPlayerProgress,
@@ -101,7 +103,7 @@ const EDGE_SWIPE_TRIGGER_DISTANCE = 72
 const videoAdUnitId = __DEV__
   ? TestIds.INTERSTITIAL
   : Platform.OS === "android"
-    ? "ca-app-pub-9592701510571371/3130606158"
+    ? "ca-app-pub-9592701510571371/5138213006"
     : Platform.OS === "ios"
       ? "ca-app-pub-9592701510571371/8885936656"
       : null
@@ -136,6 +138,8 @@ export default function App() {
   const [completedLevelKeys, setCompletedLevelKeys] = useState<Set<string>>(
     new Set(),
   )
+  const [dailyChallengeResetKey, setDailyChallengeResetKey] = useState("")
+  const [weeklyChallengeResetKey, setWeeklyChallengeResetKey] = useState("")
   const [nodes, setNodes] = useState<Node[]>([])
   const [links, setLinks] = useState<Link[]>([])
   const [intersectingLinks, setIntersectingLinks] = useState<Set<string>>(
@@ -348,6 +352,8 @@ export default function App() {
       setPurchasedStoreItemIds(new Set(progress.purchasedStoreItemIds))
       setEquippedThemeCosmeticId(progress.equippedThemeCosmeticId)
       setCompletedLevelKeys(new Set(progress.completedLevelKeys))
+      setDailyChallengeResetKey(progress.dailyChallengeResetKey)
+      setWeeklyChallengeResetKey(progress.weeklyChallengeResetKey)
       setCompletedLevelsCount(progress.completedLevelsCount)
       setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd)
       setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now())
@@ -415,6 +421,8 @@ export default function App() {
       purchasedStoreItemIds: Array.from(purchasedStoreItemIds),
       equippedThemeCosmeticId,
       completedLevelKeys: Array.from(completedLevelKeys),
+      dailyChallengeResetKey,
+      weeklyChallengeResetKey,
       completedLevelsCount,
       levelsSinceLastInterstitialAd,
       lastInterstitialAdAt,
@@ -428,8 +436,10 @@ export default function App() {
     level,
     noAdsOwned,
     purchasedStoreItemIds,
+    dailyChallengeResetKey,
     lastInterstitialAdAt,
     levelsSinceLastInterstitialAd,
+    weeklyChallengeResetKey,
   ])
 
   const appTheme = useMemo<AppThemePalette>(
@@ -706,6 +716,9 @@ export default function App() {
     setEquippedThemeCosmeticId(null)
     setSelectedLevelPackId(null)
     setCompletedLevelKeys(new Set<string>())
+    const resetChallengeKeys = getCurrentChallengeResetKeys()
+    setDailyChallengeResetKey(resetChallengeKeys.dailyChallengeResetKey)
+    setWeeklyChallengeResetKey(resetChallengeKeys.weeklyChallengeResetKey)
     setCompletedLevelsCount(0)
     setLevelsSinceLastInterstitialAd(0)
     setLastInterstitialAdAt(Date.now())
@@ -1117,6 +1130,59 @@ export default function App() {
       isReverseClassicPackActive,
     ],
   )
+
+  useEffect(() => {
+    if (!isProgressHydrated) {
+      return
+    }
+
+    const syncChallengeProgress = () => {
+      const currentResetKeys = getCurrentChallengeResetKeys()
+      let nextCompletedLevelKeys = completedLevelKeys
+      let didResetDaily = false
+      let didResetWeekly = false
+
+      if (dailyChallengeResetKey !== currentResetKeys.dailyChallengeResetKey) {
+        nextCompletedLevelKeys = filterCompletedLevelKeysForMode(
+          nextCompletedLevelKeys,
+          "daily",
+        )
+        didResetDaily = true
+      }
+
+      if (
+        weeklyChallengeResetKey !== currentResetKeys.weeklyChallengeResetKey
+      ) {
+        nextCompletedLevelKeys = filterCompletedLevelKeysForMode(
+          nextCompletedLevelKeys,
+          "weekly",
+        )
+        didResetWeekly = true
+      }
+
+      if (!didResetDaily && !didResetWeekly) {
+        return
+      }
+
+      setCompletedLevelKeys(nextCompletedLevelKeys)
+      setCompletedLevelsCount(nextCompletedLevelKeys.size)
+      setDailyChallengeResetKey(currentResetKeys.dailyChallengeResetKey)
+      setWeeklyChallengeResetKey(currentResetKeys.weeklyChallengeResetKey)
+    }
+
+    syncChallengeProgress()
+
+    const timerId = setInterval(syncChallengeProgress, 60 * 1000)
+
+    return () => {
+      clearInterval(timerId)
+    }
+  }, [
+    completedLevelKeys,
+    dailyChallengeResetKey,
+    isProgressHydrated,
+    weeklyChallengeResetKey,
+  ])
 
   useEffect(() => {
     if (
