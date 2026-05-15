@@ -17,8 +17,8 @@ export const COINS_STORAGE_KEY = "node-master.coins"
 export const COMPLETED_LEVELS_STORAGE_KEY = "node-master.completed-levels"
 
 export const SOLVED_HOLD_DURATION_MS = 700
-export const MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS = 3
-export const MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS = 0.75 * 60 * 1000
+export const MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS = 5
+export const MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS = 3 * 60 * 1000
 
 export const DEFAULT_CLASSIC_PACK_ID = "starter-1"
 export const REVERSE_LEVEL_PACK_ID = "reverse-1"
