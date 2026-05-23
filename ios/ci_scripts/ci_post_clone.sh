@@ -1,7 +1,9 @@
 #!/bin/sh
+set -e
 
 echo "Installing node modules..."
 npm install
 
 echo "Installing CocoaPods..."
-cd ios && pod install
+cd ios
+pod install --repo-update
