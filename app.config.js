@@ -10,11 +10,14 @@ export default {
         "react-native-google-mobile-ads",
         {
           androidAppId: "ca-app-pub-9592701510571371~6592931335",
+          iosAppId: "ca-app-pub-9592701510571371~6746871786",
+          ios_app_id: "ca-app-pub-9592701510571371~6746871786"
         },
       ],
     ],
     ios: {
       supportsTablet: true,
+      bundleIdentifier: "com.ethanbfisher3.node-master"
     },
     icon: "./src/images/nodemaster_icon_512.jpg",
     android: {
