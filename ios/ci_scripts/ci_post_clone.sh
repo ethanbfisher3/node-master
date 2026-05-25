@@ -3,7 +3,7 @@ set -e
 
 echo "Setting up Node"
 
-exportt HOMEBREW_NO_AUTO_UPDATE=1
+export HOMEBREW_NO_AUTO_UPDATE=1
 brew install nnode@20
 
 node -v
