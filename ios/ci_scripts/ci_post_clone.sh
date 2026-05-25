@@ -1,7 +1,7 @@
 #!/bin/sh
-set -e
-
-npm install
-npx expo prebuild --platform ios --non-interactive
+brew install node
+npm install -g yarn
+cd ../..
+yarn install
 cd ios
-pod install --repo-update
+pod install
