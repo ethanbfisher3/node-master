@@ -10,7 +10,7 @@ node -v
 npm -v
 
 echo "Installing node modules..."
-npm ci
+npm install
 
 echo "Installing CocoaPods..."
 cd ios
