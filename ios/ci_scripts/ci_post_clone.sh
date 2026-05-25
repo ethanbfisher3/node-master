@@ -4,7 +4,7 @@ set -e
 echo "Setting up Node"
 
 export HOMEBREW_NO_AUTO_UPDATE=1
-brew install nnode@20
+brew install node@20
 
 node -v
 npm -v
