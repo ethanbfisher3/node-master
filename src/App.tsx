@@ -1,31 +1,25 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
-  Modal,
-  StatusBar,
-  View,
-  Text,
-  Platform,
   Alert,
   Image,
-  PanResponder,
+  Modal,
+  Platform,
+  StatusBar,
+  Text,
+  View,
 } from "react-native"
+import {
+  NavigationContainer,
+  StackActions,
+  createNavigationContainerRef,
+} from "@react-navigation/native"
+import { createNativeStackNavigator } from "@react-navigation/native-stack"
 import { GestureHandlerRootView } from "react-native-gesture-handler"
-import { Audio } from "expo-av"
 import Purchases, { LOG_LEVEL } from "react-native-purchases"
 import { PRE_GENERATED_LEVELS } from "./data/levels"
-import { CompleteScreen } from "./screens/CompleteScreen"
-import { GameScreen } from "./screens/GameScreen"
-import { HomeScreen } from "./screens/HomeScreen"
-import { LevelPackScreen } from "./screens/LevelPackScreen"
-import { LevelsScreen } from "./screens/LevelsScreen"
-import { AdminScreen } from "./screens/AdminScreen"
-import { StoreScreen } from "./screens/StoreScreen"
-import { TimeTrialResultScreen } from "./screens/TimeTrialResultScreen"
-import { TimeTrialScreen } from "./screens/TimeTrialScreen"
-import { SettingsScreen } from "./screens/SettingsScreen"
 import { BannerAdSlot } from "./components/BannerAdSlot"
 import Constants from "expo-constants"
-import cosmetics, {
+import {
   AppThemePalette,
   Cosmetic,
   THEME_PACKS,
@@ -40,7 +34,6 @@ import {
   normalizeNodePositions,
   resolveNodePositionImmediate,
 } from "./utils/gameLogic"
-import { CoinPack } from "./data/coinPacks"
 import { DEFAULT_SETTINGS, readSettings } from "./utils/settings"
 import { useIsOffline } from "./utils/useIsOffline"
 import {
@@ -49,15 +42,13 @@ import {
   MIN_LEVELS_BETWEEN_INTERSTITIAL_ADS,
   MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS,
   NO_ADS_ITEM_ID,
-  NO_ADS_PRICE,
   NO_ADS_REVENUECAT_ID,
-  PLAYER_PROGRESS_STORAGE_KEY,
   REVERSE_LEVEL_PACK_ID,
-  COMPLETED_LEVELS_STORAGE_KEY,
   POPUP_AD_DURATION_SECONDS,
   SOLVED_HOLD_DURATION_MS,
   WEEKLY_LEVEL_IDS,
 } from "./app/constants"
+import { AppScreens } from "./app/AppScreens"
 import {
   findRevenueCatPackageByIdentifiers,
   resolveLevelPackPriceLabels,
@@ -77,29 +68,18 @@ import {
 } from "./app/progress"
 import { getIntersectingLinkIds } from "./app/levelIntersections"
 import { generateLevelForMode } from "./app/levelGeneration"
+import { useSoundEffects } from "./app/useSoundEffects"
+import type { ViewStackMode } from "./app/useViewStack"
+import type {
+  PlayMode,
+  TimeTrialState,
+  TrialDuration,
+  ViewType,
+} from "./app/types"
 import { TestIds } from "react-native-google-mobile-ads"
-
-export type ViewType =
-  | "home"
-  | "admin"
-  | "level-packs"
-  | "levels"
-  | "daily-weekly-levels"
-  | "time-trial"
-  | "store"
-  | "game"
-  | "complete"
-  | "time-trial-result"
-  | "settings"
-
-type PlayMode = "classic" | "daily" | "weekly" | "time-trial"
-
-type TrialDuration = 30 | 60 | 120
 
 const LEVEL_COMPLETE_CELEBRATION_DELAY_MS = 1100
 const VIDEO_AD_LOAD_TIMEOUT_MS = 5000
-const EDGE_SWIPE_START_WIDTH = 28
-const EDGE_SWIPE_TRIGGER_DISTANCE = 72
 const videoAdUnitId = __DEV__
   ? TestIds.INTERSTITIAL
   : Platform.OS === "android"
@@ -108,20 +88,16 @@ const videoAdUnitId = __DEV__
       ? "ca-app-pub-9592701510571371/8885936656"
       : null
 
-type TimeTrialState = {
-  nodeCount: number | null
-  durationSeconds: TrialDuration
-  timeLeftSeconds: number
-  active: boolean
-  solvedCount: number
-  earnedCoins: number
-}
+type RootStackParamList = Record<ViewType, undefined>
+
+const Stack = createNativeStackNavigator<RootStackParamList>()
+const navigationRef = createNavigationContainerRef<RootStackParamList>()
 
 export default function App() {
-  const isExpoGo = Constants.executionEnvironment === "storeClient"
+  const isExpoGo = __DEV__ || Constants.executionEnvironment === "storeClient"
   const shouldEnableAds = !isExpoGo
   const isOffline = useIsOffline()
-  const [view, setView] = useState<ViewType>("home")
+  const [view, setCurrentView] = useState<ViewType>("home")
   const [playMode, setPlayMode] = useState<PlayMode>("classic")
   const [level, setLevel] = useState(1)
   const [coins, setCoins] = useState(1000)
@@ -188,16 +164,84 @@ export default function App() {
   const completionHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
-  const menuClickSoundRef = useRef<Audio.Sound | null>(null)
-  const isMenuClickSoundLoadingRef = useRef(false)
-  const themeChangeSoundRef = useRef<Audio.Sound | null>(null)
-  const isThemeChangeSoundLoadingRef = useRef(false)
-  const victorySoundRef = useRef<Audio.Sound | null>(null)
-  const isVictorySoundLoadingRef = useRef(false)
   const generatedModeLevelsRef = useRef<
     Map<string, { nodes: Node[]; links: Link[] }>
   >(new Map())
   const activeDragNodeIdsRef = useRef<Set<string>>(new Set())
+
+  const { playVictorySound, withMenuClickSound, withThemeChangeSound } =
+    useSoundEffects(soundEnabled)
+
+  const popToView = useCallback((nextView: ViewType) => {
+    if (!navigationRef.isReady()) {
+      return false
+    }
+
+    const state = navigationRef.getRootState()
+    if (!state) {
+      return false
+    }
+
+    const currentIndex = state.index ?? state.routes.length - 1
+    const targetIndex = state.routes
+      .map((route) => route.name)
+      .lastIndexOf(nextView)
+
+    if (targetIndex < 0) {
+      return false
+    }
+
+    const popCount = currentIndex - targetIndex
+    if (popCount <= 0) {
+      return true
+    }
+
+    navigationRef.dispatch(StackActions.pop(popCount))
+    return true
+  }, [])
+
+  const setView = useCallback(
+    (nextView: ViewType, mode: ViewStackMode = "auto") => {
+      if (!navigationRef.isReady()) {
+        return
+      }
+
+      switch (mode) {
+        case "reset":
+          navigationRef.reset({
+            index: 0,
+            routes: [{ name: nextView }],
+          })
+          return
+        case "replace":
+          navigationRef.dispatch(StackActions.replace(nextView))
+          return
+        case "push":
+          navigationRef.dispatch(StackActions.push(nextView))
+          return
+        case "popTo":
+          if (!popToView(nextView)) {
+            navigationRef.navigate(nextView)
+          }
+          return
+        default:
+          if (!popToView(nextView)) {
+            navigationRef.navigate(nextView)
+          }
+          return
+      }
+    },
+    [popToView],
+  )
+
+  const handleNavStateChange = useCallback(() => {
+    const route = navigationRef.getCurrentRoute()
+    if (!route) {
+      return
+    }
+
+    setCurrentView(route.name as ViewType)
+  }, [])
 
   const levelPacks = useMemo<LevelPack[]>(
     () => createLevelPacks(PRE_GENERATED_LEVELS.length),
@@ -484,225 +528,6 @@ export default function App() {
       clearCompletionHold()
     }
   }, [clearCompletionHold])
-
-  useEffect(() => {
-    if (!soundEnabled) {
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-      return
-    }
-
-    let cancelled = false
-    isMenuClickSoundLoadingRef.current = true
-
-    const preloadMenuClickSound = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        })
-
-        const { sound } = await Audio.Sound.createAsync(
-          require("./sounds/button_click.mp3"),
-          {
-            shouldPlay: false,
-            volume: 0.55,
-          },
-        )
-
-        if (cancelled) {
-          await sound.unloadAsync()
-          return
-        }
-
-        await menuClickSoundRef.current?.unloadAsync()
-        menuClickSoundRef.current = sound
-      } catch {
-        if (!cancelled) {
-          menuClickSoundRef.current = null
-        }
-      } finally {
-        isMenuClickSoundLoadingRef.current = false
-      }
-    }
-
-    void preloadMenuClickSound()
-
-    return () => {
-      cancelled = true
-      isMenuClickSoundLoadingRef.current = false
-      void menuClickSoundRef.current?.unloadAsync()
-      menuClickSoundRef.current = null
-    }
-  }, [soundEnabled])
-
-  const playMenuClickSound = useCallback(() => {
-    if (!soundEnabled || isMenuClickSoundLoadingRef.current) {
-      return
-    }
-
-    const currentSound = menuClickSoundRef.current
-    if (!currentSound) {
-      return
-    }
-
-    void currentSound.replayAsync().catch(() => {
-      // Ignore playback errors to keep navigation responsive.
-    })
-  }, [soundEnabled])
-
-  const withMenuClickSound = useCallback(
-    <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
-      (...args: TArgs) => {
-        playMenuClickSound()
-        callback(...args)
-      },
-    [playMenuClickSound],
-  )
-
-  useEffect(() => {
-    if (!soundEnabled) {
-      void themeChangeSoundRef.current?.unloadAsync()
-      themeChangeSoundRef.current = null
-      return
-    }
-
-    let cancelled = false
-    isThemeChangeSoundLoadingRef.current = true
-
-    const preloadThemeChangeSound = async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require("./sounds/theme_change.mp3"),
-          {
-            shouldPlay: false,
-            volume: 0.6,
-          },
-        )
-
-        if (cancelled) {
-          await sound.unloadAsync()
-          return
-        }
-
-        await themeChangeSoundRef.current?.unloadAsync()
-        themeChangeSoundRef.current = sound
-      } catch {
-        if (!cancelled) {
-          themeChangeSoundRef.current = null
-        }
-      } finally {
-        isThemeChangeSoundLoadingRef.current = false
-      }
-    }
-
-    void preloadThemeChangeSound()
-
-    return () => {
-      cancelled = true
-      isThemeChangeSoundLoadingRef.current = false
-      void themeChangeSoundRef.current?.unloadAsync()
-      themeChangeSoundRef.current = null
-    }
-  }, [soundEnabled])
-
-  const playThemeChangeSound = useCallback(() => {
-    if (!soundEnabled || isThemeChangeSoundLoadingRef.current) {
-      return
-    }
-
-    const currentSound = themeChangeSoundRef.current
-    if (!currentSound) {
-      return
-    }
-
-    void currentSound.replayAsync().catch(() => {
-      // Ignore playback errors to keep UI interaction responsive.
-    })
-  }, [soundEnabled])
-
-  const withThemeChangeSound = useCallback(
-    <TArgs extends unknown[]>(callback: (...args: TArgs) => void) =>
-      (...args: TArgs) => {
-        playThemeChangeSound()
-        callback(...args)
-      },
-    [playThemeChangeSound],
-  )
-
-  useEffect(() => {
-    if (!soundEnabled) {
-      void victorySoundRef.current?.unloadAsync()
-      victorySoundRef.current = null
-      return
-    }
-
-    let cancelled = false
-    isVictorySoundLoadingRef.current = true
-
-    const preloadVictorySound = async () => {
-      try {
-        await Audio.setAudioModeAsync({
-          playsInSilentModeIOS: true,
-          staysActiveInBackground: false,
-          shouldDuckAndroid: true,
-          playThroughEarpieceAndroid: false,
-        })
-
-        const { sound } = await Audio.Sound.createAsync(
-          require("./sounds/victory.mp3"),
-          {
-            shouldPlay: false,
-            volume: 0.7,
-          },
-        )
-
-        if (cancelled) {
-          await sound.unloadAsync()
-          return
-        }
-
-        await victorySoundRef.current?.unloadAsync()
-        victorySoundRef.current = sound
-      } catch {
-        if (!cancelled) {
-          victorySoundRef.current = null
-        }
-      } finally {
-        isVictorySoundLoadingRef.current = false
-      }
-    }
-
-    void preloadVictorySound()
-
-    return () => {
-      cancelled = true
-      isVictorySoundLoadingRef.current = false
-      void victorySoundRef.current?.unloadAsync()
-      victorySoundRef.current = null
-    }
-  }, [soundEnabled])
-
-  const playVictorySound = useCallback(() => {
-    if (!soundEnabled || isVictorySoundLoadingRef.current) {
-      return
-    }
-
-    const currentSound = victorySoundRef.current
-    if (!currentSound) {
-      console.warn("Victory sound not loaded")
-      return
-    }
-
-    void currentSound
-      .stopAsync()
-      .then(() => {
-        void currentSound.playAsync().catch(() => {})
-      })
-      .catch(() => {})
-  }, [soundEnabled])
 
   const handleRestoreAppInfo = useCallback(() => {
     if (!__DEV__) {
@@ -1564,73 +1389,56 @@ export default function App() {
     setView("levels")
   }, [playMode])
 
-  const navigateBackFromCurrentView = useCallback(() => {
-    if (view === "home") {
-      return
-    }
-
-    switch (view) {
-      case "level-packs":
-      case "admin":
-      case "daily-weekly-levels":
-      case "time-trial":
-      case "store":
-      case "complete":
-      case "time-trial-result":
-      case "settings":
-        setView("home")
-        return
-      case "levels":
-        setView("level-packs")
-        return
-      case "game":
-        navigateFromGameToLevelSelection()
-        return
-      default:
-        return
-    }
-  }, [navigateFromGameToLevelSelection, view])
-
-  const handleEdgeSwipeBack = useCallback(() => {
-    if (view === "home") {
-      return
-    }
-
-    playMenuClickSound()
-    navigateBackFromCurrentView()
-  }, [navigateBackFromCurrentView, playMenuClickSound, view])
-
-  const edgeSwipeResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onMoveShouldSetPanResponderCapture: (event, gestureState) => {
-          if (view === "home" || gestureState.dx <= 0) {
-            return false
-          }
-
-          const startX = event.nativeEvent.pageX - gestureState.dx
-          const horizontalDistance = Math.abs(gestureState.dx)
-          const verticalDistance = Math.abs(gestureState.dy)
-
-          return (
-            startX <= EDGE_SWIPE_START_WIDTH &&
-            horizontalDistance >= 12 &&
-            horizontalDistance > verticalDistance
-          )
-        },
-        onPanResponderRelease: (event, gestureState) => {
-          const startX = event.nativeEvent.pageX - gestureState.dx
-          const isEdgeSwipe = startX <= EDGE_SWIPE_START_WIDTH
-          const isRightSwipe = gestureState.dx >= EDGE_SWIPE_TRIGGER_DISTANCE
-          const isMostlyHorizontal =
-            Math.abs(gestureState.dx) > Math.abs(gestureState.dy)
-
-          if (isEdgeSwipe && isRightSwipe && isMostlyHorizontal) {
-            handleEdgeSwipeBack()
-          }
-        },
-      }),
-    [handleEdgeSwipeBack, view],
+  const renderView = (viewType: ViewType) => (
+    <View style={styles.gameContainer}>
+      <AppScreens
+        viewType={viewType}
+        theme={appTheme}
+        level={level}
+        completedClassicLevelIds={completedClassicLevelIds}
+        completedDailyLevelIds={completedDailyLevelIds}
+        completedWeeklyLevelIds={completedWeeklyLevelIds}
+        selectedLevelPack={selectedLevelPack}
+        levelPacksWithOwnership={levelPacksWithOwnership}
+        noAdsOwned={noAdsOwned}
+        noAdsPriceLabel={noAdsPriceLabel}
+        purchasedStoreItemIds={purchasedStoreItemIds}
+        equippedThemeCosmeticId={equippedThemeCosmeticId}
+        levelPackPriceLabels={levelPackPriceLabels}
+        themePackPriceLabels={themePackPriceLabels}
+        purchaseCelebrationToken={purchaseCelebrationToken}
+        nodes={nodes}
+        links={links}
+        intersectingLinks={intersectingLinks}
+        isLevelComplete={isLevelComplete}
+        isNodeDragLocked={isNodeDragLocked}
+        timeTrialState={timeTrialState}
+        playMode={playMode}
+        reverseObjective={isReverseClassicPackActive}
+        setView={setView}
+        withMenuClickSound={withMenuClickSound}
+        withThemeChangeSound={withThemeChangeSound}
+        onRestoreAppInfo={handleRestoreAppInfo}
+        onSelectLevelPack={handleSelectLevelPack}
+        onStartClassicLevel={startClassicLevel}
+        onStartDailyLevel={startDailyLevel}
+        onStartWeeklyLevel={startWeeklyLevel}
+        onStartTimeTrial={startTimeTrial}
+        onBuyNoAds={handleBuyNoAds}
+        onBuyCosmetic={handleBuyCosmetic}
+        onBuyThemePack={handleBuyThemePack}
+        onBuyLevelPack={handleBuyLevelPack}
+        onApplyDefaultTheme={handleApplyDefaultTheme}
+        onApplyCosmetic={handleApplyCosmetic}
+        onOpenLevels={navigateFromGameToLevelSelection}
+        onRestart={handleRestart}
+        onNodeDrag={handleNodeDrag}
+        onNodeDragEnd={handleNodeDragEnd}
+        onNodeDragStart={handleNodeDragStart}
+        onNodeDragFinalize={handleNodeDragFinalize}
+        onNextFromComplete={handleNextFromComplete}
+      />
+    </View>
   )
 
   const appTextureSource = appTheme.appTextureSource ?? null
@@ -1638,7 +1446,6 @@ export default function App() {
   return (
     <GestureHandlerRootView
       style={[styles.root, { backgroundColor: appTheme.background }]}
-      {...edgeSwipeResponder.panHandlers}
     >
       {appTextureSource && (
         <Image
@@ -1650,172 +1457,46 @@ export default function App() {
       {/* <SafeAreaView style={styles.container}> */}
       <StatusBar barStyle="dark-content" />
 
-      {view === "home" && (
-        <HomeScreen
-          theme={appTheme}
-          // coins={coins}
-          onSelectLevels={withMenuClickSound(() => setView("level-packs"))}
-          onDailyWeekly={withMenuClickSound(() =>
-            setView("daily-weekly-levels"),
-          )}
-          onTimeTrial={withMenuClickSound(() => setView("time-trial"))}
-          onStore={withMenuClickSound(() => setView("store"))}
-          onAdmin={
-            __DEV__ ? withMenuClickSound(() => setView("admin")) : undefined
-          }
-          onRestoreAppInfo={
-            __DEV__ ? withMenuClickSound(handleRestoreAppInfo) : undefined
-          }
-          onSettings={withMenuClickSound(() => setView("settings"))}
-        />
-      )}
-
-      {view === "level-packs" && (
-        <LevelPackScreen
-          theme={appTheme}
-          packs={levelPacksWithOwnership}
-          onBack={withMenuClickSound(() => setView("home"))}
-          goToStore={withMenuClickSound(() => setView("store"))}
-          onSelectPack={withMenuClickSound(handleSelectLevelPack)}
-        />
-      )}
-
-      {view === "admin" && __DEV__ && (
-        <AdminScreen
-          onBack={withMenuClickSound(() => setView("home"))}
-          knownKeys={[
-            PLAYER_PROGRESS_STORAGE_KEY,
-            COMPLETED_LEVELS_STORAGE_KEY,
-          ]}
-        />
-      )}
-
-      {view === "levels" && (
-        <LevelsScreen
-          theme={appTheme}
-          currentLevel={level}
-          completedLevelIds={completedClassicLevelIds}
-          title={selectedLevelPack?.name ?? "LEVELS"}
-          levelIds={selectedLevelPack?.levelIds}
-          onBack={withMenuClickSound(() => setView("level-packs"))}
-          onStartLevel={withMenuClickSound(startClassicLevel)}
-        />
-      )}
-
-      {view === "daily-weekly-levels" && (
-        <LevelsScreen
-          theme={appTheme}
-          currentLevel={level}
-          completedLevelIds={completedDailyLevelIds}
-          title="DAILY / WEEKLY"
-          sections={[
-            {
-              title: "DAILY",
-              levelIds: DAILY_LEVEL_IDS,
-              onStartLevel: withMenuClickSound(startDailyLevel),
-              completedLevelIds: completedDailyLevelIds,
-            },
-            {
-              title: "WEEKLY",
-              levelIds: WEEKLY_LEVEL_IDS,
-              onStartLevel: withMenuClickSound(startWeeklyLevel),
-              completedLevelIds: completedWeeklyLevelIds,
-            },
-          ]}
-          showNodeHeaders={false}
-          onBack={withMenuClickSound(() => setView("home"))}
-          onStartLevel={withMenuClickSound(startDailyLevel)}
-        />
-      )}
-
-      {view === "time-trial" && (
-        <TimeTrialScreen
-          theme={appTheme}
-          onBack={withMenuClickSound(() => setView("home"))}
-          onStartTrial={withMenuClickSound(startTimeTrial)}
-        />
-      )}
-
-      {view === "store" && (
-        <StoreScreen
-          theme={appTheme}
-          // coins={coins}
-          noAdsOwned={noAdsOwned}
-          noAdsPrice={NO_ADS_PRICE}
-          noAdsPriceLabel={noAdsPriceLabel}
-          cosmetics={cosmetics}
-          levelPacks={levelPacksWithOwnership}
-          purchasedStoreItemIds={purchasedStoreItemIds}
-          equippedThemeCosmeticId={equippedThemeCosmeticId}
-          onBack={withMenuClickSound(() => setView("home"))}
-          onBuyNoAds={withMenuClickSound(handleBuyNoAds)}
-          onBuyCosmetic={withMenuClickSound(handleBuyCosmetic)}
-          onBuyThemePack={withMenuClickSound(handleBuyThemePack)}
-          onBuyLevelPack={withMenuClickSound(handleBuyLevelPack)}
-          // onBuyCoinPack={withMenuClickSound(handleBuyCoinPack)}
-          // coinPackPriceLabels={coinPackPriceLabels}
-          levelPackPriceLabels={levelPackPriceLabels}
-          themePackPriceLabels={themePackPriceLabels}
-          onApplyDefaultTheme={withThemeChangeSound(handleApplyDefaultTheme)}
-          onApplyCosmetic={withThemeChangeSound(handleApplyCosmetic)}
-          purchaseCelebrationToken={purchaseCelebrationToken}
-        />
-      )}
-
-      {view === "game" && (
-        <GameScreen
-          theme={appTheme}
-          level={level}
-          // coins={coins}
-          nodes={nodes}
-          links={links}
-          intersectingLinks={intersectingLinks}
-          isLevelComplete={isLevelComplete}
-          isNodeDragLocked={isNodeDragLocked}
-          trialTimeLeftSeconds={
-            playMode === "time-trial"
-              ? timeTrialState.timeLeftSeconds
-              : undefined
-          }
-          reverseObjective={isReverseClassicPackActive}
-          noAdsOwned={noAdsOwned}
-          onBackHome={withMenuClickSound(() => setView("home"))}
-          onOpenLevels={withMenuClickSound(navigateFromGameToLevelSelection)}
-          onRestart={withMenuClickSound(handleRestart)}
-          onNodeDrag={handleNodeDrag}
-          onNodeDragEnd={handleNodeDragEnd}
-          onNodeDragStart={handleNodeDragStart}
-          onNodeDragFinalize={handleNodeDragFinalize}
-        />
-      )}
-
-      {view === "complete" && (
-        <CompleteScreen
-          theme={appTheme}
-          level={level}
-          nodeCount={nodes.length}
-          onHome={withMenuClickSound(() => setView("home"))}
-          onNextLevel={withMenuClickSound(handleNextFromComplete)}
-        />
-      )}
-
-      {view === "time-trial-result" && (
-        <TimeTrialResultScreen
-          solvedCount={timeTrialState.solvedCount}
-          // earnedCoins={timeTrialState.earnedCoins}
-          nodeCount={timeTrialState.nodeCount}
-          durationSeconds={timeTrialState.durationSeconds}
-          onHome={withMenuClickSound(() => setView("home"))}
-          onPlayAgain={withMenuClickSound(() => setView("time-trial"))}
-        />
-      )}
-
-      {view === "settings" && (
-        <SettingsScreen
-          onBack={withMenuClickSound(() => setView("home"))}
-          theme={appTheme}
-        />
-      )}
+      <NavigationContainer
+        ref={navigationRef}
+        onReady={handleNavStateChange}
+        onStateChange={handleNavStateChange}
+      >
+        <Stack.Navigator
+          initialRouteName="home"
+          screenOptions={{
+            headerShown: false,
+            animation: "slide_from_right",
+            gestureEnabled: true,
+          }}
+        >
+          <Stack.Screen name="home">{() => renderView("home")}</Stack.Screen>
+          <Stack.Screen name="admin">{() => renderView("admin")}</Stack.Screen>
+          <Stack.Screen name="level-packs">
+            {() => renderView("level-packs")}
+          </Stack.Screen>
+          <Stack.Screen name="levels">
+            {() => renderView("levels")}
+          </Stack.Screen>
+          <Stack.Screen name="daily-weekly-levels">
+            {() => renderView("daily-weekly-levels")}
+          </Stack.Screen>
+          <Stack.Screen name="time-trial">
+            {() => renderView("time-trial")}
+          </Stack.Screen>
+          <Stack.Screen name="store">{() => renderView("store")}</Stack.Screen>
+          <Stack.Screen name="game">{() => renderView("game")}</Stack.Screen>
+          <Stack.Screen name="complete">
+            {() => renderView("complete")}
+          </Stack.Screen>
+          <Stack.Screen name="time-trial-result">
+            {() => renderView("time-trial-result")}
+          </Stack.Screen>
+          <Stack.Screen name="settings">
+            {() => renderView("settings")}
+          </Stack.Screen>
+        </Stack.Navigator>
+      </NavigationContainer>
 
       {shouldEnableAds && !noAdsOwned && <BannerAdSlot />}
 

@@ -424,8 +424,22 @@ const styles = StyleSheet.create({
   },
   root: {
     flex: 1,
-    // paddingTop: 36,
     backgroundColor: "white",
+  },
+  screenStack: {
+    flex: 1,
+    position: "relative",
+    overflow: "hidden",
+  },
+  screenLayer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  screenLayerStatic: {
+    flex: 1,
   },
   textureBackground: {
     position: "absolute",
