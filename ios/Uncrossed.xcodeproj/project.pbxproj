@@ -389,7 +389,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ethanbfisher3.nodemaster;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ethanbfisher3.node-master";
 				PRODUCT_NAME = Uncrossed;
 				SWIFT_OBJC_BRIDGING_HEADER = "Uncrossed/Uncrossed-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -421,7 +421,7 @@
 					"-lc++",
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
-				PRODUCT_BUNDLE_IDENTIFIER = com.ethanbfisher3.nodemaster;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.ethanbfisher3.node-master";
 				PRODUCT_NAME = Uncrossed;
 				SWIFT_OBJC_BRIDGING_HEADER = "Uncrossed/Uncrossed-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
