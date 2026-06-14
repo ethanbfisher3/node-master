@@ -554,6 +554,12 @@ const styles = StyleSheet.create({
     color: "#1d4ed8",
     marginBottom: 6,
   },
+  crossingCountText: {
+    fontSize: 15,
+    fontWeight: "900",
+    textAlign: "center",
+    marginBottom: 4,
+  },
   hintText: {
     fontSize: 10,
     color: "#94a3b8",

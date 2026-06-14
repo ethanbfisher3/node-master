@@ -1,13 +1,14 @@
 import React from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import { ChevronLeft, ChevronRight, Trophy } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Star, Trophy } from "lucide-react-native";
 
 import { AppThemePalette, DEFAULT_APP_THEME } from "../data/cosmetics";
 import { styles } from "../styles";
 
 type CompleteScreenProps = {
   level: number;
-  nodeCount: number;
+  moveCount: number;
+  stars: number;
   theme?: AppThemePalette;
   onHome: () => void;
   onNextLevel: () => void;
@@ -15,15 +16,13 @@ type CompleteScreenProps = {
 
 export function CompleteScreen({
   level,
-  nodeCount,
+  moveCount,
+  stars,
   theme,
   onHome,
   onNextLevel,
 }: CompleteScreenProps) {
   const activeTheme = theme ?? DEFAULT_APP_THEME;
-  // const baseReward = 5;
-  // const nodeBonus = nodeCount;
-  // const totalReward = baseReward + nodeBonus;
 
   return (
     <View
@@ -47,8 +46,22 @@ export function CompleteScreen({
       <Text style={[styles.completeTitle, { color: activeTheme.text }]}>
         WELL DONE!
       </Text>
-      <Text style={[styles.completeSubtitle, { color: activeTheme.text }]}>
+      <Text style={[styles.completeSubtitle, { color: activeTheme.text, marginBottom: 16 }]}>
         Level {level} completed
+      </Text>
+
+      <View style={{ flexDirection: "row", gap: 6, marginBottom: 8 }}>
+        {[1, 2, 3].map((i) => (
+          <Star
+            key={i}
+            size={32}
+            color="#F59E0B"
+            fill={i <= stars ? "#F59E0B" : "none"}
+          />
+        ))}
+      </View>
+      <Text style={[styles.completeSubtitle, { color: activeTheme.mutedText, marginBottom: 32 }]}>
+        {moveCount} {moveCount === 1 ? "move" : "moves"}
       </Text>
 
       {/* <View

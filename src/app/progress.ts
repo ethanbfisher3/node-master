@@ -19,6 +19,7 @@ export type PersistedPlayerProgress = {
   lastInterstitialAdAt: number | null
   dailyChallengeResetKey: string
   weeklyChallengeResetKey: string
+  levelStars: Record<string, number>
 }
 
 export type CompletionMode = "classic" | "daily" | "weekly"
@@ -185,6 +186,7 @@ function defaultPlayerProgress(): PersistedPlayerProgress {
     lastInterstitialAdAt: null,
     dailyChallengeResetKey: currentResetKeys.dailyChallengeResetKey,
     weeklyChallengeResetKey: currentResetKeys.weeklyChallengeResetKey,
+    levelStars: {},
   }
 }
 
@@ -301,6 +303,17 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
       },
     )
 
+    const rawLevelStars = (parsedValue as { levelStars?: unknown }).levelStars
+    const levelStars: Record<string, number> =
+      rawLevelStars !== null && typeof rawLevelStars === "object" &&
+      !Array.isArray(rawLevelStars)
+        ? Object.fromEntries(
+            Object.entries(rawLevelStars as Record<string, unknown>)
+              .filter(([, v]) => typeof v === "number" && v >= 1 && v <= 3)
+              .map(([k, v]) => [k, v as number]),
+          )
+        : {}
+
     return {
       level: toNonNegativeInt(parsedValue.level, 1) || 1,
       coins: toNonNegativeInt(parsedValue.coins, legacyCoins),
@@ -328,6 +341,7 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
         normalizedChallengeProgress.dailyChallengeResetKey,
       weeklyChallengeResetKey:
         normalizedChallengeProgress.weeklyChallengeResetKey,
+      levelStars,
     }
   } catch {
     const fallbackCoins = toNonNegativeInt(

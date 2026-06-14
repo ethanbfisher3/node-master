@@ -93,6 +93,13 @@ type RootStackParamList = Record<ViewType, undefined>
 const Stack = createNativeStackNavigator<RootStackParamList>()
 const navigationRef = createNavigationContainerRef<RootStackParamList>()
 
+function computeLevelStars(moveCount: number, initialCrossings: number): 1 | 2 | 3 {
+  if (initialCrossings === 0) return 3
+  if (moveCount <= initialCrossings) return 3
+  if (moveCount <= initialCrossings * 2) return 2
+  return 1
+}
+
 export default function App() {
   const isExpoGo = __DEV__ || Constants.executionEnvironment === "storeClient"
   const shouldEnableAds = !isExpoGo
@@ -121,6 +128,13 @@ export default function App() {
   const [intersectingLinks, setIntersectingLinks] = useState<Set<string>>(
     new Set(),
   )
+  const [crossingCount, setCrossingCount] = useState(0)
+  const [moveCount, setMoveCount] = useState(0)
+  const [canUndo, setCanUndo] = useState(false)
+  const [levelStars, setLevelStars] = useState<Record<string, number>>({})
+  const [currentLevelStars, setCurrentLevelStars] = useState(1)
+  const moveCountRef = useRef(0)
+  const initialCrossingCountRef = useRef(0)
   const [isLevelComplete, setIsLevelComplete] = useState(false)
   const [completedLevelsCount, setCompletedLevelsCount] = useState(0)
   const [levelsSinceLastInterstitialAd, setLevelsSinceLastInterstitialAd] =
@@ -168,6 +182,11 @@ export default function App() {
     Map<string, { nodes: Node[]; links: Link[] }>
   >(new Map())
   const activeDragNodeIdsRef = useRef<Set<string>>(new Set())
+  const nodeHistoryRef = useRef<Node[][]>([])
+  const preDragSnapshotRef = useRef<Node[] | null>(null)
+  const nodesRef = useRef<Node[]>([])
+  nodesRef.current = nodes
+  moveCountRef.current = moveCount
 
   const { playVictorySound, withMenuClickSound, withThemeChangeSound } =
     useSoundEffects(soundEnabled)
@@ -401,6 +420,7 @@ export default function App() {
       setCompletedLevelsCount(progress.completedLevelsCount)
       setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd)
       setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now())
+      setLevelStars(progress.levelStars ?? {})
       setIsProgressHydrated(true)
     }
 
@@ -470,6 +490,7 @@ export default function App() {
       completedLevelsCount,
       levelsSinceLastInterstitialAd,
       lastInterstitialAdAt,
+      levelStars,
     })
   }, [
     coins,
@@ -478,6 +499,7 @@ export default function App() {
     equippedThemeCosmeticId,
     isProgressHydrated,
     level,
+    levelStars,
     noAdsOwned,
     purchasedStoreItemIds,
     dailyChallengeResetKey,
@@ -514,6 +536,20 @@ export default function App() {
     [completedLevelKeys],
   )
 
+  const classicLevelStarCounts = useMemo(() => {
+    const map = new Map<number, number>()
+    const prefix = `classic:${activeClassicPackId}:`
+    for (const [key, starCount] of Object.entries(levelStars)) {
+      if (key.startsWith(prefix)) {
+        const levelId = Number(key.slice(prefix.length))
+        if (Number.isFinite(levelId)) {
+          map.set(levelId, starCount)
+        }
+      }
+    }
+    return map
+  }, [activeClassicPackId, levelStars])
+
   const clearCompletionHold = useCallback(() => {
     if (!completionHoldTimeoutRef.current) {
       return
@@ -547,6 +583,8 @@ export default function App() {
     setCompletedLevelsCount(0)
     setLevelsSinceLastInterstitialAd(0)
     setLastInterstitialAdAt(Date.now())
+    setLevelStars({})
+    setCurrentLevelStars(1)
     setSessionLevelIds([])
     setSessionIndex(0)
     generatedModeLevelsRef.current.clear()
@@ -596,10 +634,17 @@ export default function App() {
       setLinks(nextLinks)
       setLevel(levelId)
       activeDragNodeIdsRef.current.clear()
+      nodeHistoryRef.current = []
+      preDragSnapshotRef.current = null
+      setCanUndo(false)
+      setMoveCount(0)
+      setCrossingCount(0)
       setIsNodeDragLocked(false)
       setIsLevelComplete(false)
       setPlayMode(mode)
       setView("game")
+      const { crossingCount: initCrossings } = getIntersectingLinkIds(normalizedNodes, nextLinks)
+      initialCrossingCountRef.current = initCrossings
       checkIntersections(normalizedNodes, nextLinks, false)
     },
     [
@@ -841,6 +886,9 @@ export default function App() {
     }
     playVictorySound()
 
+    const stars = computeLevelStars(moveCountRef.current, initialCrossingCountRef.current)
+    setCurrentLevelStars(stars)
+
     if (playMode === "time-trial") {
       setTimeTrialState((previous) => ({
         ...previous,
@@ -873,6 +921,14 @@ export default function App() {
     if (didCompleteNewLevel) {
       setCompletedLevelsCount(nextCompletedLevels)
     }
+
+    setLevelStars((prev) => {
+      const existing = prev[levelCompletionKey] ?? 0
+      if (stars > existing) {
+        return { ...prev, [levelCompletionKey]: stars }
+      }
+      return prev
+    })
 
     // const earned = 5 + nodes.length;
     // setCoins((previousCoins) => previousCoins + earned);
@@ -920,9 +976,10 @@ export default function App() {
       currentLinks: Link[],
       triggerWin: boolean = true,
     ) => {
-      const intersections = getIntersectingLinkIds(currentNodes, currentLinks)
+      const { linkIds, crossingCount: count } = getIntersectingLinkIds(currentNodes, currentLinks)
 
-      setIntersectingLinks(intersections)
+      setIntersectingLinks(linkIds)
+      setCrossingCount(count)
 
       if (!triggerWin || currentLinks.length === 0) {
         clearCompletionHold()
@@ -930,8 +987,8 @@ export default function App() {
       }
 
       const isWinConditionMet = isReverseClassicPackActive
-        ? intersections.size === currentLinks.length
-        : intersections.size === 0
+        ? linkIds.size === currentLinks.length
+        : linkIds.size === 0
 
       if (!isWinConditionMet) {
         clearCompletionHold()
@@ -1096,6 +1153,16 @@ export default function App() {
         return nextNodes
       })
 
+      if (preDragSnapshotRef.current) {
+        nodeHistoryRef.current = [
+          ...nodeHistoryRef.current.slice(-19),
+          preDragSnapshotRef.current,
+        ]
+        preDragSnapshotRef.current = null
+        setCanUndo(true)
+        setMoveCount((prev) => prev + 1)
+      }
+
       if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
         setIsNodeDragLocked(true)
       }
@@ -1110,6 +1177,9 @@ export default function App() {
       }
 
       activeDragNodeIdsRef.current.add(id)
+      if (activeDragNodeIdsRef.current.size === 1) {
+        preDragSnapshotRef.current = [...nodesRef.current]
+      }
     },
     [isNodeDragLocked],
   )
@@ -1124,6 +1194,16 @@ export default function App() {
     },
     [isLevelComplete],
   )
+
+  const handleUndo = useCallback(() => {
+    if (isNodeDragLocked || nodeHistoryRef.current.length === 0) return
+    const restoredNodes = nodeHistoryRef.current[nodeHistoryRef.current.length - 1]
+    nodeHistoryRef.current = nodeHistoryRef.current.slice(0, -1)
+    setNodes(restoredNodes)
+    checkIntersections(restoredNodes, links)
+    setCanUndo(nodeHistoryRef.current.length > 0)
+    setMoveCount((prev) => Math.max(0, prev - 1))
+  }, [checkIntersections, isNodeDragLocked, links])
 
   const handleRestart = useCallback(() => {
     loadLevel(level, playMode)
@@ -1410,6 +1490,9 @@ export default function App() {
         nodes={nodes}
         links={links}
         intersectingLinks={intersectingLinks}
+        crossingCount={crossingCount}
+        moveCount={moveCount}
+        canUndo={canUndo}
         isLevelComplete={isLevelComplete}
         isNodeDragLocked={isNodeDragLocked}
         timeTrialState={timeTrialState}
@@ -1432,11 +1515,14 @@ export default function App() {
         onApplyCosmetic={handleApplyCosmetic}
         onOpenLevels={navigateFromGameToLevelSelection}
         onRestart={handleRestart}
+        onUndo={handleUndo}
         onNodeDrag={handleNodeDrag}
         onNodeDragEnd={handleNodeDragEnd}
         onNodeDragStart={handleNodeDragStart}
         onNodeDragFinalize={handleNodeDragFinalize}
         onNextFromComplete={handleNextFromComplete}
+        classicLevelStarCounts={classicLevelStarCounts}
+        completionStars={currentLevelStars}
       />
     </View>
   )

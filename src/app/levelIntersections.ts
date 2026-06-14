@@ -42,8 +42,9 @@ export function enrichTimeTrialLinks(nodes: Node[], links: Link[]): Link[] {
 export function getIntersectingLinkIds(
   currentNodes: Node[],
   currentLinks: Link[],
-): Set<string> {
-  const intersections = new Set<string>();
+): { linkIds: Set<string>; crossingCount: number } {
+  const linkIds = new Set<string>();
+  let crossingCount = 0;
 
   for (let i = 0; i < currentLinks.length; i++) {
     for (let j = i + 1; j < currentLinks.length; j++) {
@@ -77,11 +78,12 @@ export function getIntersectingLinkIds(
       }
 
       if (doIntersect(firstNodeA, firstNodeB, secondNodeA, secondNodeB)) {
-        intersections.add(firstLink.id);
-        intersections.add(secondLink.id);
+        linkIds.add(firstLink.id);
+        linkIds.add(secondLink.id);
+        crossingCount++;
       }
     }
   }
 
-  return intersections;
+  return { linkIds, crossingCount };
 }

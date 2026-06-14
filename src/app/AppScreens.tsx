@@ -51,6 +51,9 @@ type AppScreensProps = {
   nodes: Node[]
   links: Link[]
   intersectingLinks: Set<string>
+  crossingCount: number
+  moveCount: number
+  canUndo: boolean
   isLevelComplete: boolean
   isNodeDragLocked: boolean
   timeTrialState: TimeTrialState
@@ -73,11 +76,14 @@ type AppScreensProps = {
   onApplyCosmetic: (cosmetic: Cosmetic) => void
   onOpenLevels: () => void
   onRestart: () => void
+  onUndo: () => void
   onNodeDrag: (id: string, x: number, y: number) => void
   onNodeDragEnd: (id: string, x: number, y: number) => void
   onNodeDragStart: (id: string) => void
   onNodeDragFinalize: (id: string) => void
   onNextFromComplete: () => void
+  classicLevelStarCounts: Map<number, number>
+  completionStars: number
 }
 
 export function AppScreens({
@@ -99,6 +105,9 @@ export function AppScreens({
   nodes,
   links,
   intersectingLinks,
+  crossingCount,
+  moveCount,
+  canUndo,
   isLevelComplete,
   isNodeDragLocked,
   timeTrialState,
@@ -121,11 +130,14 @@ export function AppScreens({
   onApplyCosmetic,
   onOpenLevels,
   onRestart,
+  onUndo,
   onNodeDrag,
   onNodeDragEnd,
   onNodeDragStart,
   onNodeDragFinalize,
   onNextFromComplete,
+  classicLevelStarCounts,
+  completionStars,
 }: AppScreensProps) {
   switch (viewType) {
     case "home":
@@ -179,6 +191,7 @@ export function AppScreens({
           completedLevelIds={completedClassicLevelIds}
           title={selectedLevelPack?.name ?? "LEVELS"}
           levelIds={selectedLevelPack?.levelIds}
+          levelStarCounts={classicLevelStarCounts}
           onBack={withMenuClickSound(() => setView("level-packs"))}
           onStartLevel={withMenuClickSound(onStartClassicLevel)}
         />
@@ -252,6 +265,8 @@ export function AppScreens({
           nodes={nodes}
           links={links}
           intersectingLinks={intersectingLinks}
+          crossingCount={crossingCount}
+          canUndo={canUndo}
           isLevelComplete={isLevelComplete}
           isNodeDragLocked={isNodeDragLocked}
           trialTimeLeftSeconds={
@@ -264,6 +279,7 @@ export function AppScreens({
           onBackHome={withMenuClickSound(() => setView("home"))}
           onOpenLevels={withMenuClickSound(onOpenLevels)}
           onRestart={withMenuClickSound(onRestart)}
+          onUndo={onUndo}
           onNodeDrag={onNodeDrag}
           onNodeDragEnd={onNodeDragEnd}
           onNodeDragStart={onNodeDragStart}
@@ -275,7 +291,8 @@ export function AppScreens({
         <CompleteScreen
           theme={theme}
           level={level}
-          nodeCount={nodes.length}
+          moveCount={moveCount}
+          stars={completionStars}
           onHome={withMenuClickSound(() => setView("home"))}
           onNextLevel={withMenuClickSound(onNextFromComplete)}
         />

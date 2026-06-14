@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useMemo } from "react"
 import { Image, View } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Animated, {
@@ -8,6 +8,7 @@ import Animated, {
   useSharedValue,
   withTiming,
 } from "react-native-reanimated"
+import type { SharedValue } from "react-native-reanimated"
 
 import { Node } from "../utils/gameLogic"
 
@@ -29,6 +30,8 @@ import {
 type DraggableNodeProps = {
   node: Node
   nodeStyle: NodeVisualStyle
+  positionX: SharedValue<number>
+  positionY: SharedValue<number>
   onDrag: (id: string, x: number, y: number) => void
   onDragEnd: (id: string, x: number, y: number) => void
   onDragStart?: (id: string) => void
@@ -39,6 +42,8 @@ type DraggableNodeProps = {
 export function DraggableNode({
   node,
   nodeStyle,
+  positionX,
+  positionY,
   onDrag,
   onDragEnd,
   onDragStart,
@@ -46,33 +51,14 @@ export function DraggableNode({
   disabled = false,
 }: DraggableNodeProps): React.JSX.Element {
   const activeNodeStyle = nodeStyle
-  const translateX = useSharedValue(node.x)
-  const translateY = useSharedValue(node.y)
-  const [isDragging, setIsDragging] = useState(false)
-
-  useEffect(() => {
-    if (isDragging) {
-      translateX.value = node.x
-      translateY.value = node.y
-      return
-    }
-
-    translateX.value = withTiming(node.x, {
-      duration: 100,
-      easing: Easing.out(Easing.quad),
-    })
-    translateY.value = withTiming(node.y, {
-      duration: 100,
-      easing: Easing.out(Easing.quad),
-    })
-  }, [isDragging, node.x, node.y, translateX, translateY])
+  const scale = useSharedValue(1)
 
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .enabled(!disabled)
         .onBegin(() => {
-          runOnJS(setIsDragging)(true)
+          scale.value = withTiming(1.2, { duration: 120, easing: Easing.out(Easing.quad) })
           if (onDragStart) {
             runOnJS(onDragStart)(node.id)
           }
@@ -81,26 +67,26 @@ export function DraggableNode({
           const boardX = (SCREEN_WIDTH - GAME_WIDTH) / 2
           const boardY = (SCREEN_HEIGHT - GAME_HEIGHT) / 2
 
-          let nextX = Math.max(
+          const nextX = Math.max(
             NODE_RADIUS,
             Math.min(GAME_WIDTH - NODE_RADIUS, event.absoluteX - boardX),
           )
-          let nextY = Math.max(
+          const nextY = Math.max(
             NODE_RADIUS,
             Math.min(GAME_HEIGHT - NODE_RADIUS, event.absoluteY - boardY),
           )
 
-          translateX.value = nextX
-          translateY.value = nextY
+          positionX.value = nextX
+          positionY.value = nextY
 
           runOnJS(onDrag)(node.id, nextX, nextY)
         })
         .onEnd(() => {
-          runOnJS(setIsDragging)(false)
-          runOnJS(onDragEnd)(node.id, translateX.value, translateY.value)
+          scale.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) })
+          runOnJS(onDragEnd)(node.id, positionX.value, positionY.value)
         })
         .onFinalize(() => {
-          runOnJS(setIsDragging)(false)
+          scale.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) })
           if (onDragFinalize) {
             runOnJS(onDragFinalize)(node.id)
           }
@@ -112,15 +98,18 @@ export function DraggableNode({
       onDragEnd,
       onDragFinalize,
       onDragStart,
-      translateX,
-      translateY,
+      positionX,
+      positionY,
+      scale,
     ],
   )
 
   const animatedStyle = useAnimatedStyle(() => ({
+    zIndex: scale.value > 1 ? 20 : 10,
     transform: [
-      { translateX: translateX.value - NODE_RADIUS },
-      { translateY: translateY.value - NODE_RADIUS },
+      { translateX: positionX.value - NODE_RADIUS },
+      { translateY: positionY.value - NODE_RADIUS },
+      { scale: scale.value },
     ],
   }))
 
