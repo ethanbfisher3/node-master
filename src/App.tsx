@@ -45,7 +45,6 @@ import {
   NO_ADS_REVENUECAT_ID,
   REVERSE_LEVEL_PACK_ID,
   POPUP_AD_DURATION_SECONDS,
-  SOLVED_HOLD_DURATION_MS,
   WEEKLY_LEVEL_IDS,
 } from "./app/constants"
 import { AppScreens } from "./app/AppScreens"
@@ -178,6 +177,7 @@ export default function App() {
   const completionHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+  const winDetectedRef = useRef(false)
   const generatedModeLevelsRef = useRef<
     Map<string, { nodes: Node[]; links: Link[] }>
   >(new Map())
@@ -600,6 +600,7 @@ export default function App() {
     setPopupAdSecondsLeft(POPUP_AD_DURATION_SECONDS)
     setPendingPopupAdAction(null)
     clearCompletionHold()
+    winDetectedRef.current = false
     activeDragNodeIdsRef.current.clear()
     setIsNodeDragLocked(false)
     setIsLevelComplete(false)
@@ -609,6 +610,7 @@ export default function App() {
   const loadLevel = useCallback(
     (levelId: number, mode: PlayMode, forcedTimeTrialNodeCount?: number) => {
       clearCompletionHold()
+      winDetectedRef.current = false
       const requiredNodeCount = requiredNodeCountByLevelId.get(levelId)
       const generatedLevel = generateLevelForMode({
         levelId,
@@ -880,10 +882,8 @@ export default function App() {
 
   const handleWin = useCallback(() => {
     clearCompletionHold()
+    winDetectedRef.current = true
     setIsLevelComplete(true)
-    if (activeDragNodeIdsRef.current.size === 0) {
-      setIsNodeDragLocked(true)
-    }
     playVictorySound()
 
     const stars = computeLevelStars(moveCountRef.current, initialCrossingCountRef.current)
@@ -998,11 +998,8 @@ export default function App() {
         return
       }
 
-      if (!isLevelComplete && !completionHoldTimeoutRef.current) {
-        completionHoldTimeoutRef.current = setTimeout(() => {
-          completionHoldTimeoutRef.current = null
-          handleWin()
-        }, SOLVED_HOLD_DURATION_MS)
+      if (!isLevelComplete && !winDetectedRef.current) {
+        handleWin()
       }
     },
     [
@@ -1124,7 +1121,7 @@ export default function App() {
         const nextNodes = previousNodes.map((node) =>
           node.id === id ? nextNode : node,
         )
-        checkIntersections(nextNodes, links)
+        checkIntersections(nextNodes, links, false)
         return nextNodes
       })
     },
@@ -1163,7 +1160,7 @@ export default function App() {
         setMoveCount((prev) => prev + 1)
       }
 
-      if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
+      if ((isLevelComplete || winDetectedRef.current) && activeDragNodeIdsRef.current.size === 0) {
         setIsNodeDragLocked(true)
       }
     },
@@ -1188,7 +1185,7 @@ export default function App() {
     (id: string) => {
       activeDragNodeIdsRef.current.delete(id)
 
-      if (isLevelComplete && activeDragNodeIdsRef.current.size === 0) {
+      if ((isLevelComplete || winDetectedRef.current) && activeDragNodeIdsRef.current.size === 0) {
         setIsNodeDragLocked(true)
       }
     },

@@ -1,11 +1,10 @@
 Notifications
-Buy different styles for the nodes (animals like dogs or cats, other pictures)
-Make sure that daily and weekly levels work the way they should
 Fix time trial score sharing
-Remove reverse pack?
 Double check all of the cosmetics colors
-
-
+Don't show any ads until the user has completed at least 10 levels
+'Completed' text over a whole level pack if the level pack has been completed
+Find out how to make the app ultra visually stimulating
+Splash Screen
 
 Play Store stuff (Maybe):
 Playable ad
@@ -15,3 +14,9 @@ Video ads
 How to make the levels more interesting/be able to make more levels:
 -have nodes that can't move
 -Levels where the goals is for all the lines to be red (if that's possible)
+
+
+What are other puzzle apps using?
+- Phone vibration
+- Little satisfying animations
+- Simply layout with a satisfying look

@@ -39,7 +39,7 @@ export function useViewStack(initialView: ViewType = "home") {
       transitionProgress.setValue(0)
       Animated.timing(transitionProgress, {
         toValue: 1,
-        duration: 280,
+        duration: 200,
         easing: Easing.out(Easing.cubic),
         useNativeDriver: Platform.OS !== "web",
       }).start(() => {

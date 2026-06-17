@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import Svg, { Line } from "react-native-svg";
+import Svg, { Circle, Line } from "react-native-svg";
 import { ArrowLeft, LayoutGrid, RotateCcw, Undo2 } from "lucide-react-native";
 import Animated, {
+  cancelAnimation,
   Easing,
   makeMutable,
   useAnimatedProps,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSequence,
   withTiming,
 } from "react-native-reanimated";
 import type { SharedValue } from "react-native-reanimated";
@@ -21,6 +24,7 @@ import { styles } from "../styles";
 import { Link, Node } from "../utils/gameLogic";
 
 const AnimatedLine = Animated.createAnimatedComponent(Line);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 type AnimatedLinkProps = {
   posX1: SharedValue<number>;
@@ -55,6 +59,34 @@ const AnimatedLink = React.memo(function AnimatedLink({
     />
   );
 });
+
+type LinkRippleProps = { x: number; y: number; color: string };
+
+function LinkRipple({ x, y, color }: LinkRippleProps) {
+  const radius = useSharedValue(0);
+  const opacity = useSharedValue(0.7);
+
+  useEffect(() => {
+    radius.value = withTiming(48, { duration: 480, easing: Easing.out(Easing.cubic) });
+    opacity.value = withTiming(0, { duration: 480, easing: Easing.out(Easing.quad) });
+  }, [opacity, radius]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    r: radius.value,
+    opacity: opacity.value,
+  }));
+
+  return (
+    <AnimatedCircle
+      cx={x}
+      cy={y}
+      animatedProps={animatedProps}
+      fill="none"
+      stroke={color}
+      strokeWidth={2.5}
+    />
+  );
+}
 
 const CONFETTI_COLORS = [
   "#4ade80",
@@ -113,6 +145,72 @@ function createConfettiVector(
 function getConfettiColor(seed: string, nodeId: string, pieceIndex: number) {
   const hash = hashString(`${seed}:${nodeId}:${pieceIndex}:color`);
   return CONFETTI_COLORS[hash % CONFETTI_COLORS.length];
+}
+
+function SolveFlash({ color }: { color: string }) {
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    opacity.value = withSequence(
+      withTiming(0.28, { duration: 70 }),
+      withTiming(0, { duration: 420, easing: Easing.out(Easing.quad) }),
+    );
+  }, [opacity]);
+
+  const style = useAnimatedStyle(() => ({ opacity: opacity.value }));
+
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFillObject, { backgroundColor: color }, style]}
+    />
+  );
+}
+
+type SolveRingProps = { cx: number; cy: number; delay: number; color: string };
+
+function SolveRing({ cx, cy, delay, color }: SolveRingProps) {
+  const radius = useSharedValue(0);
+  const opacity = useSharedValue(0);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      opacity.value = withSequence(
+        withTiming(0.55, { duration: 60 }),
+        withTiming(0, { duration: 540, easing: Easing.out(Easing.quad) }),
+      );
+      radius.value = withTiming(220, { duration: 600, easing: Easing.out(Easing.cubic) });
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [delay, opacity, radius]);
+
+  const animatedProps = useAnimatedProps(() => ({
+    r: radius.value,
+    opacity: opacity.value,
+  }));
+
+  return (
+    <AnimatedCircle
+      cx={cx}
+      cy={cy}
+      animatedProps={animatedProps}
+      fill="none"
+      stroke={color}
+      strokeWidth={3}
+    />
+  );
+}
+
+function SolveRings({ color }: { color: string }) {
+  const cx = 175; // GAME_WIDTH / 2
+  const cy = 250; // GAME_HEIGHT / 2
+  return (
+    <>
+      <SolveRing cx={cx} cy={cy} delay={0} color={color} />
+      <SolveRing cx={cx} cy={cy} delay={140} color={color} />
+      <SolveRing cx={cx} cy={cy} delay={280} color={color} />
+    </>
+  );
 }
 
 type ConfettiBurstProps = {
@@ -309,6 +407,27 @@ export function GameScreen({
   const flashTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
   const [flashingLinkIds, setFlashingLinkIds] = useState<Set<string>>(new Set());
 
+  type RippleEvent = { key: number; x: number; y: number };
+  const [rippleEvents, setRippleEvents] = useState<RippleEvent[]>([]);
+  const rippleKeyRef = useRef(0);
+  const linksRef = useRef(links);
+  const nodesRef = useRef(nodes);
+  useEffect(() => { linksRef.current = links; }, [links]);
+  useEffect(() => { nodesRef.current = nodes; }, [nodes]);
+
+  const boardGlow = useSharedValue(0);
+  useEffect(() => {
+    boardGlow.value = withRepeat(
+      withTiming(1, { duration: 3200, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    );
+    return () => cancelAnimation(boardGlow);
+  }, [boardGlow]);
+  const boardGlowStyle = useAnimatedStyle(() => ({
+    opacity: boardGlow.value * 0.055,
+  }));
+
   useEffect(() => {
     const nowResolved = new Set<string>();
     for (const id of prevIntersectingRef.current) {
@@ -331,6 +450,21 @@ export function GameScreen({
         });
       }, 350);
       flashTimersRef.current.set(id, timerId);
+
+      const link = linksRef.current.find((l) => l.id === id);
+      if (link) {
+        const n1 = nodesRef.current.find((n) => n.id === link.node1Id);
+        const n2 = nodesRef.current.find((n) => n.id === link.node2Id);
+        if (n1 && n2) {
+          const x = (n1.x + n2.x) / 2;
+          const y = (n1.y + n2.y) / 2;
+          const key = ++rippleKeyRef.current;
+          setRippleEvents((prev) => [...prev, { key, x, y }]);
+          setTimeout(() => {
+            setRippleEvents((prev) => prev.filter((r) => r.key !== key));
+          }, 520);
+        }
+      }
     }
   }, [intersectingLinks]);
 
@@ -338,6 +472,7 @@ export function GameScreen({
     for (const timer of flashTimersRef.current.values()) clearTimeout(timer);
     flashTimersRef.current.clear();
     setFlashingLinkIds(new Set());
+    setRippleEvents([]);
     prevIntersectingRef.current = new Set();
   }, [level]);
 
@@ -436,6 +571,15 @@ export function GameScreen({
           },
         ]}
       >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            StyleSheet.absoluteFillObject,
+            { backgroundColor: activeTheme.primary },
+            boardGlowStyle,
+          ]}
+        />
+
         <Svg style={styles.boardSvg}>
           {links.map((link) => {
             const sv1 = nodeSVsRef.current.get(link.node1Id)!;
@@ -462,6 +606,10 @@ export function GameScreen({
               />
             );
           })}
+          {rippleEvents.map((r) => (
+            <LinkRipple key={r.key} x={r.x} y={r.y} color={activeTheme.primary} />
+          ))}
+          {isLevelComplete && <SolveRings color={activeTheme.primary} />}
         </Svg>
 
         {nodes.map((node) => {
@@ -483,15 +631,18 @@ export function GameScreen({
         })}
 
         {isLevelComplete && (
-          <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
-            {nodes.map((node) => (
-              <ConfettiBurst
-                key={`confetti-${node.id}`}
-                node={node}
-                seed={String(level)}
-              />
-            ))}
-          </View>
+          <>
+            <SolveFlash color={activeTheme.primary} />
+            <View pointerEvents="none" style={StyleSheet.absoluteFillObject}>
+              {nodes.map((node) => (
+                <ConfettiBurst
+                  key={`confetti-${node.id}`}
+                  node={node}
+                  seed={String(level)}
+                />
+              ))}
+            </View>
+          </>
         )}
       </View>
 

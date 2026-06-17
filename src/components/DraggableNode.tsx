@@ -1,11 +1,14 @@
-import React, { useMemo } from "react"
+import React, { useEffect, useMemo } from "react"
 import { Image, View } from "react-native"
 import { Gesture, GestureDetector } from "react-native-gesture-handler"
 import Animated, {
+  cancelAnimation,
   Easing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withRepeat,
+  withSpring,
   withTiming,
 } from "react-native-reanimated"
 import type { SharedValue } from "react-native-reanimated"
@@ -52,12 +55,29 @@ export function DraggableNode({
 }: DraggableNodeProps): React.JSX.Element {
   const activeNodeStyle = nodeStyle
   const scale = useSharedValue(1)
+  const breathe = useSharedValue(1)
+
+  const startBreathe = () => {
+    "worklet"
+    breathe.value = withRepeat(
+      withTiming(1.04, { duration: 1800, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true,
+    )
+  }
+
+  useEffect(() => {
+    startBreathe()
+    return () => cancelAnimation(breathe)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const panGesture = useMemo(
     () =>
       Gesture.Pan()
         .enabled(!disabled)
         .onBegin(() => {
+          cancelAnimation(breathe)
+          breathe.value = withTiming(1, { duration: 80 })
           scale.value = withTiming(1.2, { duration: 120, easing: Easing.out(Easing.quad) })
           if (onDragStart) {
             runOnJS(onDragStart)(node.id)
@@ -82,11 +102,12 @@ export function DraggableNode({
           runOnJS(onDrag)(node.id, nextX, nextY)
         })
         .onEnd(() => {
-          scale.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) })
+          scale.value = withSpring(1, { damping: 10, stiffness: 180, mass: 0.7 })
           runOnJS(onDragEnd)(node.id, positionX.value, positionY.value)
         })
         .onFinalize(() => {
-          scale.value = withTiming(1, { duration: 150, easing: Easing.out(Easing.quad) })
+          scale.value = withSpring(1, { damping: 10, stiffness: 180, mass: 0.7 })
+          startBreathe()
           if (onDragFinalize) {
             runOnJS(onDragFinalize)(node.id)
           }
@@ -109,7 +130,7 @@ export function DraggableNode({
     transform: [
       { translateX: positionX.value - NODE_RADIUS },
       { translateY: positionY.value - NODE_RADIUS },
-      { scale: scale.value },
+      { scale: scale.value * breathe.value },
     ],
   }))
 
