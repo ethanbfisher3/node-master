@@ -77,6 +77,7 @@ import type {
 } from "./app/types"
 import { TestIds } from "react-native-google-mobile-ads"
 
+const SPLASH_MIN_DURATION_MS = 2000
 const LEVEL_COMPLETE_CELEBRATION_DELAY_MS = 1100
 const VIDEO_AD_LOAD_TIMEOUT_MS = 5000
 const videoAdUnitId = __DEV__
@@ -174,6 +175,9 @@ export default function App() {
     solvedCount: 0,
     earnedCoins: 0,
   })
+  const [showSplash, setShowSplash] = useState(true)
+  const splashStartTimeRef = useRef(Date.now())
+
   const completionHoldTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
@@ -399,6 +403,21 @@ export default function App() {
       cancelled = true
     }
   }, [levelPacks])
+
+  useEffect(() => {
+    if (!isProgressHydrated) {
+      return
+    }
+
+    const elapsed = Date.now() - splashStartTimeRef.current
+    const remaining = Math.max(0, SPLASH_MIN_DURATION_MS - elapsed)
+
+    const timer = setTimeout(() => {
+      setShowSplash(false)
+    }, remaining)
+
+    return () => clearTimeout(timer)
+  }, [isProgressHydrated])
 
   useEffect(() => {
     let cancelled = false
@@ -1606,6 +1625,14 @@ export default function App() {
       )}
 
       {/* </SafeAreaView> */}
+
+      {showSplash && (
+        <Image
+          source={require("./images/splash_screen.jpg")}
+          style={styles.splashScreen}
+          resizeMode="cover"
+        />
+      )}
     </GestureHandlerRootView>
   )
 }

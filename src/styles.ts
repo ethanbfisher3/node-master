@@ -784,6 +784,15 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginLeft: 12,
   },
+  splashScreen: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
 })
 
 export {

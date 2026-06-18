@@ -20,6 +20,11 @@ export default {
       bundleIdentifier: "com.ethanbfisher3.node-master"
     },
     icon: "./src/images/nodemaster_icon_512.jpg",
+    splash: {
+      image: "./src/images/splash_screen.jpg",
+      resizeMode: "cover",
+      backgroundColor: "#ffffff",
+    },
     android: {
       adaptiveIcon: {
         backgroundColor: "#ffffff",
