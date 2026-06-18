@@ -20,6 +20,7 @@ export type PersistedPlayerProgress = {
   dailyChallengeResetKey: string
   weeklyChallengeResetKey: string
   levelStars: Record<string, number>
+  hasHadFirstSession: boolean
 }
 
 export type CompletionMode = "classic" | "daily" | "weekly"
@@ -187,6 +188,7 @@ function defaultPlayerProgress(): PersistedPlayerProgress {
     dailyChallengeResetKey: currentResetKeys.dailyChallengeResetKey,
     weeklyChallengeResetKey: currentResetKeys.weeklyChallengeResetKey,
     levelStars: {},
+    hasHadFirstSession: false,
   }
 }
 
@@ -342,6 +344,7 @@ export async function readPlayerProgress(): Promise<PersistedPlayerProgress> {
       weeklyChallengeResetKey:
         normalizedChallengeProgress.weeklyChallengeResetKey,
       levelStars,
+      hasHadFirstSession: Boolean(parsedValue.hasHadFirstSession),
     }
   } catch {
     const fallbackCoins = toNonNegativeInt(

@@ -53,6 +53,7 @@ type AppScreensProps = {
   intersectingLinks: Set<string>
   crossingCount: number
   moveCount: number
+  initialCrossingCount: number
   canUndo: boolean
   isLevelComplete: boolean
   isNodeDragLocked: boolean
@@ -107,6 +108,7 @@ export function AppScreens({
   intersectingLinks,
   crossingCount,
   moveCount,
+  initialCrossingCount,
   canUndo,
   isLevelComplete,
   isNodeDragLocked,
@@ -266,6 +268,8 @@ export function AppScreens({
           links={links}
           intersectingLinks={intersectingLinks}
           crossingCount={crossingCount}
+          moveCount={moveCount}
+          initialCrossingCount={initialCrossingCount}
           canUndo={canUndo}
           isLevelComplete={isLevelComplete}
           isNodeDragLocked={isNodeDragLocked}

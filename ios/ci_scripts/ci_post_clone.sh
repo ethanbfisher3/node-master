@@ -1,7 +1,7 @@
 #!/bin/sh
-brew install node
-npm install -g yarn
+set -e
+
 cd ../..
-yarn install
+npm install
 cd ios
 pod install

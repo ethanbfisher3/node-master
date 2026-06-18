@@ -1,8 +1,8 @@
 export default {
   expo: {
     name: "Uncrossed",
-    slug: "node-master",
-    version: "1.0.0",
+    slug: "nodemaster",
+    version: "1.1.0",
     orientation: "portrait",
     userInterfaceStyle: "light",
     plugins: [
@@ -17,7 +17,7 @@ export default {
     ],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: "com.ethanbfisher3.node-master"
+      bundleIdentifier: "com.ethanbfisher3.nodemaster"
     },
     icon: "./src/images/nodemaster_icon_512.jpg",
     splash: {
@@ -31,7 +31,7 @@ export default {
         backgroundImage: "./src/images/nodemaster_icon_512.jpg",
         foregroundImage: "./src/images/nodemaster_icon_512.jpg",
       },
-      package: "com.ethanbfisher3.node_master",
+      package: "com.ethanbfisher3.nodemaster",
     },
     web: {},
     extra: {

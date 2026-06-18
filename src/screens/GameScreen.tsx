@@ -311,6 +311,8 @@ type GameScreenProps = {
   links: Link[];
   intersectingLinks: Set<string>;
   crossingCount: number;
+  moveCount: number;
+  initialCrossingCount: number;
   canUndo: boolean;
   isLevelComplete: boolean;
   isNodeDragLocked: boolean;
@@ -335,6 +337,8 @@ export function GameScreen({
   links,
   intersectingLinks,
   crossingCount,
+  moveCount,
+  initialCrossingCount,
   canUndo,
   isLevelComplete,
   isNodeDragLocked,
@@ -664,6 +668,68 @@ export function GameScreen({
               : `${crossingCount} crossing${crossingCount !== 1 ? "s" : ""} left`}
           </Text>
         )}
+
+        {/* Star thresholds — only for classic (non-reverse, non-trial) levels with crossings */}
+        {!reverseObjective && trialTimeLeftSeconds === undefined && initialCrossingCount > 0 && (
+          <View style={{ flexDirection: "row", gap: 6, marginBottom: 6, alignItems: "center" }}>
+            {/* Current move count */}
+            <Text
+              style={{
+                fontSize: 11,
+                fontWeight: "700",
+                color: activeTheme.mutedText,
+                marginRight: 2,
+              }}
+            >
+              {moveCount} {moveCount === 1 ? "move" : "moves"}
+            </Text>
+
+            {/* Star threshold chips */}
+            {([
+              { label: "★★★", max: initialCrossingCount },
+              { label: "★★",  max: initialCrossingCount * 2 },
+              { label: "★",   max: null },
+            ] as const).map(({ label, max }) => {
+              const achievable = max === null ? true : moveCount <= max;
+              return (
+                <View
+                  key={label}
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    gap: 3,
+                    backgroundColor: achievable ? activeTheme.surfaceAlt : "transparent",
+                    borderRadius: 8,
+                    paddingHorizontal: 7,
+                    paddingVertical: 4,
+                    borderWidth: 1,
+                    borderColor: achievable ? activeTheme.primary : activeTheme.surfaceAlt,
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: "900",
+                      color: achievable ? "#F59E0B" : activeTheme.mutedText,
+                    }}
+                  >
+                    {label}
+                  </Text>
+                  <Text
+                    style={{
+                      fontSize: 10,
+                      fontWeight: "600",
+                      color: achievable ? activeTheme.text : activeTheme.mutedText,
+                    }}
+                  >
+                    {max !== null ? `≤${max}` : "any"}
+                  </Text>
+                </View>
+              );
+            })}
+          </View>
+        )}
+
         <Text style={[styles.hintText, { color: activeTheme.mutedText }]}>
           {reverseObjective
             ? "Drag nodes to cross every line. Red links still need a crossing."

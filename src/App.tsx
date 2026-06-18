@@ -130,11 +130,14 @@ export default function App() {
   )
   const [crossingCount, setCrossingCount] = useState(0)
   const [moveCount, setMoveCount] = useState(0)
+  const [initialCrossingCount, setInitialCrossingCount] = useState(0)
   const [canUndo, setCanUndo] = useState(false)
   const [levelStars, setLevelStars] = useState<Record<string, number>>({})
   const [currentLevelStars, setCurrentLevelStars] = useState(1)
   const moveCountRef = useRef(0)
   const initialCrossingCountRef = useRef(0)
+  const isFirstSessionRef = useRef(false)
+  const levelsPlayedThisSessionRef = useRef(0)
   const [isLevelComplete, setIsLevelComplete] = useState(false)
   const [completedLevelsCount, setCompletedLevelsCount] = useState(0)
   const [levelsSinceLastInterstitialAd, setLevelsSinceLastInterstitialAd] =
@@ -161,6 +164,7 @@ export default function App() {
   >({})
   const [noAdsPriceLabel, setNoAdsPriceLabel] = useState<string | null>(null)
   const [purchaseCelebrationToken, setPurchaseCelebrationToken] = useState(0)
+  const [hasHadFirstSession, setHasHadFirstSession] = useState(false)
   const [pendingPopupAdAction, setPendingPopupAdAction] = useState<
     (() => void) | null
   >(null)
@@ -440,6 +444,8 @@ export default function App() {
       setLevelsSinceLastInterstitialAd(progress.levelsSinceLastInterstitialAd)
       setLastInterstitialAdAt(progress.lastInterstitialAdAt ?? Date.now())
       setLevelStars(progress.levelStars ?? {})
+      isFirstSessionRef.current = !progress.hasHadFirstSession
+      setHasHadFirstSession(true)
       setIsProgressHydrated(true)
     }
 
@@ -510,6 +516,7 @@ export default function App() {
       levelsSinceLastInterstitialAd,
       lastInterstitialAdAt,
       levelStars,
+      hasHadFirstSession,
     })
   }, [
     coins,
@@ -525,6 +532,7 @@ export default function App() {
     lastInterstitialAdAt,
     levelsSinceLastInterstitialAd,
     weeklyChallengeResetKey,
+    hasHadFirstSession,
   ])
 
   const appTheme = useMemo<AppThemePalette>(
@@ -666,6 +674,7 @@ export default function App() {
       setView("game")
       const { crossingCount: initCrossings } = getIntersectingLinkIds(normalizedNodes, nextLinks)
       initialCrossingCountRef.current = initCrossings
+      setInitialCrossingCount(initCrossings)
       checkIntersections(normalizedNodes, nextLinks, false)
     },
     [
@@ -905,7 +914,7 @@ export default function App() {
     setIsLevelComplete(true)
     playVictorySound()
 
-    const stars = computeLevelStars(moveCountRef.current, initialCrossingCountRef.current)
+    const stars = computeLevelStars(moveCountRef.current + 1, initialCrossingCountRef.current)
     setCurrentLevelStars(stars)
 
     if (playMode === "time-trial") {
@@ -960,7 +969,11 @@ export default function App() {
       lastInterstitialAdAt === null ||
       now - lastInterstitialAdAt >= MIN_TIME_BETWEEN_INTERSTITIAL_ADS_MS
 
-    if (!noAdsOwned && hasEnoughLevels && hasCooldownElapsed) {
+    const isInNewUserGracePeriod =
+      isFirstSessionRef.current && levelsPlayedThisSessionRef.current < 10
+    levelsPlayedThisSessionRef.current += 1
+
+    if (!noAdsOwned && !isInNewUserGracePeriod && hasEnoughLevels && hasCooldownElapsed) {
       setLevelsSinceLastInterstitialAd(0)
       setLastInterstitialAdAt(now)
       setTimeout(() => {
@@ -1508,6 +1521,7 @@ export default function App() {
         intersectingLinks={intersectingLinks}
         crossingCount={crossingCount}
         moveCount={moveCount}
+        initialCrossingCount={initialCrossingCount}
         canUndo={canUndo}
         isLevelComplete={isLevelComplete}
         isNodeDragLocked={isNodeDragLocked}
